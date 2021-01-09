@@ -17,7 +17,7 @@ def Neighborhood_Descriptives():
        'INW_4564', 'INW_65PL', 'AANTAL_HH', 'GEM_HH_GR', 'NUTS2CODE',
        'NUTS2NAME', 'NUTS1CODE', 'NUTS1NAME', 'area_type'
     """
-    data = pd.read_excel('Neighbourhood_Descriptives.xlsx')
+    data = pd.read_excel('Data/Neighbourhood_Descriptives.xlsx')
     return data
 
 def UFS_Universe_NL():
@@ -29,7 +29,7 @@ def UFS_Universe_NL():
     'operatorId', 'name', 'address', 'postalCode', 'city', 'Latitude',
        'Longitude', 'globalChannel', 'cuisineType', 'closed', 'pc4'
     """
-    data = pd.read_excel("UFS_Universe_NL.xlsx")
+    data = pd.read_excel("Data/UFS_Universe_NL.xlsx")
 
     # Adding pc4 variable
     data['pc4'] = data['postalCode'].str.extract(r'(\d{4})', expand=False) # using regex pattern to find the code
@@ -57,13 +57,13 @@ def zipcode_data_2017():
        'AFS_KDV', 'AV1_KDV', 'AV3_KDV', 'AV5_KDV', 'AFS_BRANDW', 'AFS_OPRIT',
        'AFS_TRNOVS', 'AFS_TREINS', 'OAD', 'STED'
     """
-    data = pd.read_csv('zipcode_data_2017.csv', sep='|')
+    data = pd.read_csv('Data/zipcode_data_cbs/zipcode_data_2017.csv', sep='|')
     data = data.rename(columns={'PC4': 'pc4'}) # rename PC4 to pc4 to make it consistent with the other datasets
     return data
 
 def zipcode_data_2019():
     """
-    Returns the zipcode_data_2019.csv file as a pd dataframe.g
+    Returns the zipcode_data_2019.csv file as a pd dataframe.
     Note: I added the 'pc4' variable here by splitting postalCode
 
     Variables in order of columns:
@@ -74,8 +74,11 @@ def zipcode_data_2019():
        'WON_6574', 'WON_7584', 'WON_8594', 'WON_9504', 'WON_0514', 'WON_1524',
        'WON_MRGEZ', 'UITKMINAOW', 'OAD', 'STED'
     """
-    data = pd.read_csv('zipcode_data_2019.csv', sep='|')
+    data = pd.read_csv('Data/zipcode_data_cbs/zipcode_data_2019.csv', sep='|')
     data = data.rename(columns={'PC4': 'pc4'}) # rename PC4 to pc4 to make it consistent with the other datasets
     return data
 
-
+zipcode_data_2019()
+zipcode_data_2017()
+Neighborhood_Descriptives()
+UFS_Universe_NL()
