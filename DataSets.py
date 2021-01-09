@@ -63,7 +63,7 @@ def zipcode_data_2017():
 
 def zipcode_data_2019():
     """
-    Returns the zipcode_data_2019.csv file as a pd dataframe.
+    Returns the zipcode_data_2019.csv file as a pd dataframe.g
     Note: I added the 'pc4' variable here by splitting postalCode
 
     Variables in order of columns:
