@@ -35,6 +35,17 @@ def UFS_Universe_NL():
     data['pc4'] = data['postalCode'].str.extract(r'(\d{4})', expand=False) # using regex pattern to find the code
     return data
 
+def UFS_Universe_NL_ratings():
+    """
+    Returns the UFS_Universe_nl.xlsx file as a pd dataframe.
+    Variables in order of columns:
+    'operatorId', 'name', 'address', 'postalCode', 'city', 'Latitude',
+       'Longitude', 'globalChannel', 'cuisineType', 'closed', 'pc4', 'rating', 'no_reviews'
+    """
+    data = pd.read_csv("Data/ScrapedRatings/data_ratings.csv")
+
+    return data
+
 def zipcode_data_2017():
     """
     Returns the zipcode_data_2017.csv file as a pd dataframe.
@@ -82,3 +93,4 @@ zipcode_data_2019()
 zipcode_data_2017()
 Neighborhood_Descriptives()
 UFS_Universe_NL()
+UFS_Universe_NL_ratings()
