@@ -33,6 +33,7 @@ def UFS_Universe_NL():
 
     # Adding pc4 variable
     data['pc4'] = data['postalCode'].str.extract(r'(\d{4})', expand=False) # using regex pattern to find the code
+    data['city'] = data.city.astype(str) # was float first for some reason...
     return data
 
 def UFS_Universe_NL_ratings():
@@ -88,9 +89,10 @@ def zipcode_data_2019():
     data = pd.read_csv('Data/zipcode_data_cbs/zipcode_data_2019.csv', sep='|')
     data = data.rename(columns={'PC4': 'pc4'}) # rename PC4 to pc4 to make it consistent with the other datasets
     return data
-
+''' 
 zipcode_data_2019()
 zipcode_data_2017()
 Neighborhood_Descriptives()
 UFS_Universe_NL()
 UFS_Universe_NL_ratings()
+'''
