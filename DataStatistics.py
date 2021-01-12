@@ -8,21 +8,7 @@ def get_class_counts(X):
     '''
     Get the counts of the classes and the corresponding counts from one-dimensional arry X, in ascending order
     '''
-
-    classes = set(X) # all different types in X
-    dict_classes = dict.fromkeys(classes, 0) # make a dictionary to keep count of the number of classes
-    k = len(classes) # number of types
-    n = len(X) # number of observations
-    # counting the types:
-    for x in X:
-        dict_classes[x] += 1
-
-    # sorting the keys and values, in increasing order respective of the values
-    sorted_indices = np.argsort(np.array(list(dict_classes.values())))
-    sorted_classes = np.array(list(dict_classes.keys()))[sorted_indices]
-    sorted_values = np.array(list(dict_classes.values()))[sorted_indices]
-
-    return sorted_classes, sorted_values
+    return X.value_counts(ascending=True, dropna = False)
 
 
 def show_statistics_classes(X, var_name = ''):
@@ -31,14 +17,15 @@ def show_statistics_classes(X, var_name = ''):
     where X is an one-dimensional array
     '''
 
-    sorted_classes, sorted_values = get_class_counts(X)
+    class_counts = get_class_counts(X)
     n = len(X)
     print('Statistics of %s:' % (var_name))
 
     # printing statistics
-    max_len = len(max(X, key=len)) # max len of the strings in X
-    for cl, val in zip(sorted_classes, sorted_values):
-        print('%-*s: %d (%1.1f%%)' % (max_len+2, cl, val, (float(val)/n)*100))
+    class_counts.index = class_counts.index.fillna('NaN')
+    max_len = len(max(class_counts.index, key=len))  # max len of the strings in X
+    for class_name, class_val in class_counts.items():
+        print('%-*s: %d (%1.1f%%)' % (max_len + 2, class_name, class_val, (float(class_val) / n) * 100))
 
     print('Total number of observations: ' + str(n))
     print('\n')
@@ -50,7 +37,8 @@ def pie_plot(X, name = '', cmap= 'tab20'):
     Note: should not use when k is really large, such as 20
     '''
 
-    sorted_classes, sorted_values = get_class_counts(X)
+    class_counts = get_class_counts(X)
+    sorted_classes, sorted_values = class_counts.index, class_counts
     k = len(sorted_classes) # number of types
     n = len(X) # number of observations
 
@@ -62,7 +50,7 @@ def pie_plot(X, name = '', cmap= 'tab20'):
     plt.gca().axis('equal')
     plt.legend(patches,
                ['%s: %1.1f%%' % (cl, (float(val)/n)*100) for cl, val in zip(sorted_classes, sorted_values)],
-               loc= "center right", bbox_to_anchor=(1,0.5), bbox_transform=plt.gcf().transFigure)
+               loc= "center right", bbox_to_anchor=(1, 0.5), bbox_transform=plt.gcf().transFigure)
     plt.subplots_adjust(left=0.125, bottom=0.1, right=0.6)
     plt.title(name +'\n observations = ' + str(n))
     plt.show()
@@ -130,7 +118,7 @@ if __name__ == '__main__':
     # print the basic statistics for the class variables with too many classes
     show_statistics_classes(data_restaurants['city'], var_name='city')
     show_statistics_classes(data_restaurants['cuisineType'], var_name='cuisineType')
-
+    show_statistics_classes(data_restaurants['closed'], var_name = 'closed')
 
     '''
     Some statistics about the postal codes: (I just did some examples)
