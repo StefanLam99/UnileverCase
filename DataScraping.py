@@ -43,16 +43,19 @@ class RatingScraper:
         For the given url string we start a HTML session. The page is rendered because there are
         Javascript elements on the page. Then we obtain the elements of interest
         """
-        #url = url[0]
+        # url = url[0]
         session = HTMLSession()
         r = session.get(url)
         r.html.render()
         try:
             rating = (r.html.find('.Aq14fc', first=True).text)
             no_reviews = (r.html.find('.hqzQac', first=True).text).split(" ")[0]
+            price_and_type = [element.text for element in (r.html.find('.YhemCb'))]
+            session.close()
         except AttributeError:
-            return (None,None)
-        return [rating, no_reviews]
+            session.close()
+            return (None,None,None)
+        return [rating, no_reviews, price_and_type]
 
 
     def get_all_ratings(self, begin, end):
@@ -66,10 +69,10 @@ class RatingScraper:
         for url in self.data.url_list[begin:end]:
             print(url)
             print(type(url))
-            (rating, no_reviews) = self.get_rating_for_url(url)
-            google_output.append([rating, no_reviews])
+            (rating, no_reviews, price_and_type) = self.get_rating_for_url(url)
+            google_output.append([rating, no_reviews, price_and_type])
             print(rating, no_reviews)
-        google_output = pd.DataFrame(google_output, columns=['rating', 'no_reviews'])
+        google_output = pd.DataFrame(google_output, columns=['rating', 'no_reviews', 'price_and_type'])
         self.google_output_df = google_output
 
     def get_all_ratings_mp(self, begin, end):
@@ -78,9 +81,9 @@ class RatingScraper:
         I did not implement test to check if it returns the review in the same order as
         with a simple for loop (#TODO?)
         """
-        pool = mp.Pool(mp.cpu_count())
+        pool = mp.Pool(mp.cpu_count()-1)
         google_output = pool.map(RatingScraper.get_rating_for_url,[url for url in self.data.url_list[begin: end]])
-        self.google_output_df = pd.DataFrame(google_output, columns=['rating', 'no_reviews'])
+        self.google_output_df = pd.DataFrame(google_output, columns=['rating', 'no_reviews', 'price_and_type'])
 
     def scrape(self, begin = 0, end = 29055, multiprocessing = True): # 29055 is the number of restaurants we have
         """"
@@ -101,4 +104,4 @@ class RatingScraper:
 if __name__ == '__main__':
     file_output = 'data_ratings' # give ur output csv. file a name
     scraper = RatingScraper(file_output)
-    scraper.scrape(begin=0, end=5, multiprocessing=True)
+    scraper.scrape(begin=0, end=100, multiprocessing=True)
