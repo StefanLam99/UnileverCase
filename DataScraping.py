@@ -72,8 +72,8 @@ class RatingScraper:
             (rating, no_reviews, price_and_type) = self.get_rating_for_url(url)
             google_output.append([rating, no_reviews, price_and_type])
             print(rating, no_reviews)
-        google_output = pd.DataFrame(google_output, columns=['rating', 'no_reviews', 'price_and_type'])
-        self.google_output_df = google_output
+        google_output = pd.DataFrame(google_output, columns=['rating', 'no_reviews', 'price_and_type'], index = range(begin,end))
+        self.google_output_df = self.google_output_df.append(google_output)
 
     def get_all_ratings_mp(self, begin, end):
         """"
@@ -83,25 +83,49 @@ class RatingScraper:
         """
         pool = mp.Pool(mp.cpu_count()-1)
         google_output = pool.map(RatingScraper.get_rating_for_url,[url for url in self.data.url_list[begin: end]])
-        self.google_output_df = pd.DataFrame(google_output, columns=['rating', 'no_reviews', 'price_and_type'])
+        google_output = pd.DataFrame(google_output, columns=['rating', 'no_reviews', 'price_and_type'], index = range(begin,end))
+        self.google_output_df = self.google_output_df.append(google_output)
 
-    def scrape(self, begin = 0, end = 29055, multiprocessing = True): # 29055 is the number of restaurants we have
+    @staticmethod
+    def chunker(seq, size):
+        return (seq[pos:pos + size] for pos in range(0, len(seq), size))
+
+    def scrape(self, begin = 0, end = 29055, chunksize = None, multiprocessing = True): # 29055 is the number of restaurants we have
         """"
         This method is the 'main method' of the class. It calls all the class methods to obtain the final dataframe
         this dataframe then is written to a csv file.
         """
         self.make_url()
-        if(multiprocessing):
-            self.get_all_ratings_mp(begin, end)
-        else:
-            self.get_all_ratings(begin, end)
+        k = 0
+        if chunksize is None:
+            chunksize = end - begin
+        begin_temp = begin+chunksize*k
+        end_temp = begin+chunksize*(k+1)
+        while begin_temp < end:
+            print(begin_temp)
+            if(multiprocessing):
+                if end_temp >= end:
+                    self.get_all_ratings_mp(begin_temp, end)
+                else:
+                    self.get_all_ratings_mp(begin_temp, end_temp)
+            else:
+                if end_temp > end:
+                    self.get_all_ratings(begin_temp, end)
+                else:
+                    self.get_all_ratings(begin_temp, end_temp)
+            self.data_ratings = pd.concat([self.data, self.google_output_df], axis = 1)
+            self.data_ratings.to_csv(self.file_output) # create csv file with the ratings and number of reviews
+            print("Succesfully written data. The program ran for ", round(time.time() - self.start, 3), " seconds")
 
-        self.data_ratings = pd.concat([self.data, self.google_output_df], axis = 1)
-        self.data_ratings.to_csv(self.file_output) # create csv file with the ratings and number of reviews
-        print("Succesfully written data. The program run for ", round(time.time() - self.start, 3), " seconds")
+            k += 1
+            begin_temp = begin+chunksize * k
+            end_temp = begin+chunksize * (k + 1)
+        print("Completed: Succesfully written data. The program run for ", round(time.time() - self.start, 3), " seconds")
 
 
 if __name__ == '__main__':
     file_output = 'data_ratings' # give ur output csv. file a name
     scraper = RatingScraper(file_output)
-    scraper.scrape(begin=0, end=100, multiprocessing=True)
+    scraper.scrape(begin=0, end=6, chunksize=5, multiprocessing=False)
+    #Er gaat iets fout als begin+k*chunksize = end. In that case vergeet ie de een na laatste waarneming mee te nemen.
+    #Dus bijvoorbeeld begin = 11, end = 31, chunk = 10. Dan alleen scraping van 11-29...
