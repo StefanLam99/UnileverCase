@@ -117,8 +117,8 @@ if __name__ == '__main__':
 
     # print the basic statistics for the class variables with too many classes
     show_statistics_classes(data_restaurants['city'], var_name='city')
-    show_statistics_classes(data_restaurants['cuisineType'], var_name='cuisineType')
     show_statistics_classes(data_restaurants['closed'], var_name = 'closed')
+    show_statistics_classes(data_restaurants['cuisineType'], var_name='cuisineType')
 
     '''
     Some statistics about the postal codes: (I just did some examples)
