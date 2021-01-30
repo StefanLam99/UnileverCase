@@ -36,6 +36,22 @@ def UFS_Universe_NL():
     data['city'] = data.city.astype(str) # was float first for some reason...
     return data
 
+def UFS_Universe_NLnew():
+    """
+    Returns the UFS_Universe_nl.xlsx file as a pd dataframe.
+    Note: I added the 'pc4' variable here by splitting postalCode
+
+    Variables in order of columns:
+    'operatorId', 'name', 'address', 'postalCode', 'city', 'Latitude',
+       'Longitude', 'globalChannel', 'cuisineType', 'closed', 'pc4'
+    """
+    data = pd.read_excel("Data/UFS_Universe_NLnew.xlsx")
+
+    # Adding pc4 variable
+    data['pc4'] = data['postalCode'].str.extract(r'(\d{4})', expand=False) # using regex pattern to find the code
+    data['city'] = data.city.astype(str) # was float first for some reason...
+    return data
+
 def UFS_Universe_NL_ratings():
     """
     Returns the UFS_Universe_nl.xlsx file as a pd dataframe.
