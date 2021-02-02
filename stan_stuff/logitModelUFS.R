@@ -45,11 +45,11 @@ res.multinom <- multinom(y~., data = X, Hess = TRUE)
 
 
 #estimate Stan model
-# b.out <- stan(file='multilog.stan', 
-#               data=datlist,
-#               iter = 1000,
-#               chains = 2,
-#               seed = 12591)
+b.out <- stan(file='./stan_stuff/multilog.stan',
+              data=datlist,
+              iter = 1000,
+              chains = 2,
+              seed = 12591)
 
 # launch_shinystan(b.out)
 res.stan <- summary(b.out, par="beta", probs=.5)$summary %>% as.data.frame
