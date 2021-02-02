@@ -15,7 +15,7 @@ class SOM:
     Class to make a SOM network model
     """
 
-    def __init__(self, X, map_shape = (5,5), init_lr=0.01, init_response=1, max_iter=20000, normalize_data=False, seed=0):
+    def __init__(self, X, map_shape = (8,8), init_lr=0.1, init_response=1, max_iter=20000, normalize_data=False, seed=0):
         np.random.seed(seed)  # set the seed for this SOM network
 
         # input data and output map
@@ -30,7 +30,7 @@ class SOM:
 
         # constants for the update rule
         self.init_lr = init_lr
-        self.init_radius = max(self.M, self.d)/2
+        self.init_radius = max(self.map_shape[0], self.map_shape[1])/2
         #self.init_radius = 1
         self.init_response = init_response
         self.time_constant = self.max_iter/np.log(self.init_radius)
@@ -137,7 +137,7 @@ class SOM:
             prototypes[i, :], indices[i,:] = self.BMU(X[i,:])
             labels[i] = int(indices[i, 1] + indices[i, 0]*self.map_shape[1])
 
-        return prototypes, indices, labels
+        return prototypes, indices, labels.astype(int)
 
 
 

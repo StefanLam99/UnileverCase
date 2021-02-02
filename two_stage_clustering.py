@@ -76,7 +76,7 @@ class TwoStageClustering:
         """
         W, indices, _ = self.model_SOM.predict(X)
         labels = self.model_clus.predict(W)
-        return labels
+        return labels.astype(int)
 
     def save(self, file_name=None):
         """
