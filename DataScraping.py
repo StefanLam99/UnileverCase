@@ -101,4 +101,4 @@ class RatingScraper:
 if __name__ == '__main__':
     file_output = 'data_ratings' # give ur output csv. file a name
     scraper = RatingScraper(file_output)
-    scraper.scrape(begin=0, end=5, multiprocessing=True)
+    scraper.scrape(begin=0, end=5000, multiprocessing=False)
