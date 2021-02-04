@@ -11,7 +11,7 @@ from sklearn.metrics import davies_bouldin_score
 
 
 
-def get_davies_bouldin_score(cluster_df_np, center, clus_method):
+def davies_bouldin_score_TSC(cluster_df_np, center, clus_method):
     '''
     returns the kmeans score regarding Davies Bouldin for points to centers
     INPUT:
@@ -43,16 +43,16 @@ def get_DB_TSC(cluster_df_np, centers, clus_method):
     '''
     scores = []
     for center in centers:
-        scores.append(get_davies_bouldin_score(cluster_df_np, center, clus_method))
+        scores.append(davies_bouldin_score_TSC(cluster_df_np, center, clus_method))
     plt.plot(centers, scores, linestyle='--', marker='o', color='b');
     plt.xlabel('K');
     plt.ylabel('Davies Bouldin score');
-    plt.title('Davies Bouldin score vs. K ');
+    plt.title('Davies Bouldin score vs. K Two Stage Clustering');
     plt.show()
     return scores
 
 
-def get_kmeans_DB_score(cluster_df_subset, center):
+def DB_score_Kmeans(cluster_df_subset, center):
     '''
     returns the kmeans score regarding Davies Bouldin for points to centers
     INPUT:
@@ -71,6 +71,51 @@ def get_kmeans_DB_score(cluster_df_subset, center):
     score = davies_bouldin_score(cluster_df_subset, model)
 
     return score
+
+def get_DB_Kmeans(cluster_df, centers= list(range(2, 11))):
+    scores = []
+    for center in centers:
+        scores.append(DB_score_Kmeans(cluster_df, center))
+
+    plt.plot(centers, scores, linestyle='--', marker='o', color='b')
+    plt.xlabel('K')
+    plt.ylabel('Davies Bouldin score')
+    plt.title('Davies Bouldin score vs. K (regular Kmeans)')
+    plt.show()
+    return scores
+
+def DB_score_GMM(data, center):
+    '''
+    returns the kmeans score regarding Davies Bouldin for points to centers
+    INPUT:
+        data - the dataset you want to fit kmeans to
+        center - the number of centers you want (the k value)
+    OUTPUT:
+        score - the Davies Bouldin score for the kmeans model fit to the data
+    '''
+    # instantiate kmeans
+    GMM = GaussianMixture(n_components=center)
+    # Then fit the model to your data using the fit method
+    model = GMM.fit_predict(data)
+
+    # Calculate Davies Bouldin score
+
+    score = davies_bouldin_score(data, model)
+
+    return score
+
+def get_DB_GMM(cluster_df,  centers= list(range(2, 11))):
+    scores = []
+    for center in centers:
+        scores.append(DB_score_GMM(cluster_df, center))
+
+    plt.plot(centers, scores, linestyle='--', marker='o', color='b')
+    plt.xlabel('K')
+    plt.ylabel('Davies Bouldin score')
+    plt.title('Davies Bouldin score vs. K GMM')
+    plt.show()
+    return scores
+
 
 def get_silhouette(obs, NumberOfClusters = range(3, 10), gmmOrKmeans = 'kmeans'):
     silhouette_score_values = list()
@@ -100,15 +145,20 @@ if __name__ == '__main__':
 
     cluster_df = pd.read_csv("zipcodedata_version_1.csv")
     cluster_df_np = cluster_df.to_numpy()
-    #cluster_df_subset = cluster_df.head(100)
-    #print(cluster_df_subset)
 
-    get_silhouette(cluster_df_np)
-    get_DB_TSC(cluster_df_np, list(range(2, 10)),clus_method="kmeans")
+   # DAVIES BOULDIN SCORE
+
+    # get_DB_Kmeans(cluster_df, list(range(2, 11)))
+    # get_DB_GMM(cluster_df, list(range(2, 11)))
+    #get_DB_TSC(cluster_df_np, list(range(2, 10)),clus_method="kmeans")
+
+
+    # SILHOUETTE FOR TSC
+
+    #get_silhouette(cluster_df_np)
     #model2 = KMeans(10)
     #model2.fit(cluster_df)
     #labels2 = model2.predict(cluster_df)
-
 
     #model = TwoStageClustering(cluster_df_np, max_iter_SOM=10000, clus_method = "kmeans")
     #model.train()
