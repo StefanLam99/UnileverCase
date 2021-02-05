@@ -34,6 +34,9 @@ WX <- WX_df[small_subset,WX_interest]
 W <- W_df[small_subset,W_interest]
 cluster <- WX_df$cluster[small_subset]
 
+cluster_for_zip <- W_df$cluster
+zip_level <- X_df$level_zip[small_subset]
+
 datlist <- list(N=nrow(X),           #Nr of obs
                 K=length(unique(y)),  #Possible outcomes
                 D=ncol(X)+1,            #NR of predictors
@@ -46,7 +49,23 @@ datlist.unpooled <- list(N=nrow(X),           #Nr of obs
                          y=as.numeric(y),  #Dependent Variable)
                          n_cluster = length(unique(cluster)),
                          cluster = cluster
-                         )     
+                         )  
+
+
+
+W <- W_df[,W_interest]
+datlist.proposal <- list(N=nrow(X),           #Nr of obs
+                         K=length(unique(y)),  #Possible outcomes
+                         D=ncol(X)+1,            #NR of predictors
+                         Z=ncol(W)+1,
+                         n_zip=nrow(W),
+                         n_cluster=length(unique(cluster_for_zip)),
+                         x=cbind(1,X),                 #Predictor Matrix
+                         w=cbind(1,W),
+                         y=as.numeric(y),  #Dependent Variable)
+                         zip=zip_level,
+                         cluster_for_zip=cluster_for_zip
+) 
 
 
 ####MODEL####
@@ -94,23 +113,25 @@ compare_multinom_stan(y, X, res.stan, res.multinom)
 multinom_unpooled <- function(y, df, cluster, current_cluster){
   res.multinom <- multinom(y[cluster==current_cluster]~., data = df[cluster==current_cluster,])
 }
+multinom.out <- multinom_unpooled(y,X,cluster,1)
 
 #Estimate Bayesian Model
 b.out <- stan(file='./stan_stuff/unpooledmultilog.stan', data = datlist.unpooled, iter = 1000, chains = 1)
 
 # launch_shinystan(b.out)
-res.stan <- summary(b.out, par="beta", probs=.5)$summary %>% as.data.frame
+resunpooled.stan <- summary(b.out, par="beta", probs=.5)$summary %>% as.data.frame
 
 df_stan <-function(y,df,n_cluster,res.stan){
   out.stan <- data.frame(beta=rep(c('(Intercept)', colnames(df)), length(levels(y))), 
                          value.stan = res.stan[,1]) %>%
     mutate(stan.std=res.stan[,2]) %>%
     mutate(group=rep(1:n_cluster, each=(length(levels(y)))*(ncol(X)+1))) %>%
-    mutate(option=rep(levels(y), each=n_cluster*(ncol(df)+1)))%>%
+    mutate(option=rep(rep(levels(y), each=(ncol(df)+1)),n_cluster))%>%
     mutate(coef= paste0(group, ":",option, ":", beta))%>%
     dplyr::select(-option, -beta, -group)
+  
 }
-out.stan <- df_stan(y,X,5,res.stan)
+outmultilog.stan <- df_stan(y,X,2,resunpooled.stan)
 
 
 #### Run unpooled Multilog with hierarchical prior####
@@ -122,22 +143,29 @@ out.stan <- df_stan(y,X,5,res.stan)
 # }
 
 #Estimate Bayesian Model
-b.out <- stan(file='./stan_stuff/unpooledmultiloghierarchical.stan', 
-              data = datlist.unpooled, iter = 1000, chains = 1)
-b.maxout <- stan(file='./stan_stuff/unpooledmultiloghierarchicalmax.stan', 
-                 data = datlist.unpooled, iter = 1000, chains = 1)
-# launch_shinystan(b.out)
-resmax.stan <- summary(b.maxout, par="beta", probs=.5)$summary %>% as.data.frame
+bhier.out <- stan(file='./stan_stuff/unpooledmultiloghierarchical.stan', 
+              data = datlist.unpooled, iter = 1000, chains = 1, control=list(adapt_delta = 0.85))
+# b.maxout <- stan(file='./stan_stuff/unpooledmultiloghierarchicalmax.stan', 
+#                  data = datlist.unpooled, iter = 1000, chains = 1)
+launch_shinystan(b.out)
+res.stan <- summary(bhier.out, par="beta", probs=.5)$summary %>% as.data.frame
 
 df_stan <-function(y,df,n_cluster,res.stan){
   out.stan <- data.frame(beta=rep(c('(Intercept)', colnames(df)), length(levels(y))), 
                          value.stan = res.stan[,1]) %>%
     mutate(stan.std=res.stan[,2]) %>%
     mutate(group=rep(1:n_cluster, each=(length(levels(y)))*(ncol(X)+1))) %>%
-    mutate(option=rep(levels(y), each=n_cluster*(ncol(df)+1)))%>%
+    mutate(option=rep(rep(levels(y), each=(ncol(df)+1)),n_cluster))%>%
     mutate(coef= paste0(group, ":",option, ":", beta))%>%
     dplyr::select(-option, -beta, -group)
+  
 }
-outmax.stan <- df_stan(y,X,5,resmax.stan)
+out.stan <- df_stan(y,X,2,res.stan)
 
-df.compare <-merge(outmax.stan, out.stan, by="coef", all.y=T)
+df.compare <-merge(outmultilog.stan, out.stan, by.x="coef")
+
+
+#Sample hierarchical model from proposal
+bproposal.out <-stan(file='./stan_stuff/hierarchical_proposal.stan', 
+                     data = datlist.proposal, iter = 1000, chains = 1, control=list(adapt_delta = 0.85))
+-
