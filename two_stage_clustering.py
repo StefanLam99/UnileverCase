@@ -19,7 +19,7 @@ class TwoStageClustering:
     is a clustering method such as k-means or GMM.
     """
 
-    def __init__(self, X, map_shape=(5,5), n_clusters=10, init_lr=0.01, init_response=1, max_iter_SOM=20000, max_iter_clus=1000, clus_method="kmeans", normalize_data=False, seed=0):
+    def __init__(self, X, map_shape=(8,8), n_clusters=10, init_lr=0.1, init_response=1, max_iter_SOM=10000, max_iter_clus=5000, clus_method="kmeans", normalize_data=False, seed=0):
 
         # data and SOM map shape
         self.X = X
@@ -44,9 +44,9 @@ class TwoStageClustering:
         #  second stage model
         self.clus_method = clus_method
         if self.clus_method == "kmeans":
-            self.model_clus = KMeans(n_clusters=self.n_clusters, random_state=self.seed, algorithm="full", max_iter=self.max_iter_clus)
+            self.model_clus = KMeans(n_clusters=self.n_clusters, random_state=self.seed, algorithm="full", max_iter=self.max_iter_clus, n_init=10)
         else:
-            self.model_clus = GaussianMixture(n_components=self.n_clusters, max_iter=self.max_iter_clus)
+            self.model_clus = GaussianMixture(n_components=self.n_clusters, max_iter=self.max_iter_clus, n_init=10, init_params="random")
 
     def train(self, print_progress=True):
         """
