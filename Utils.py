@@ -71,6 +71,19 @@ def infer_data_labels(pred_clusters, cluster_labels):
 
     return predicted_labels
 
+def normalize(df):
+    """
+    Normalizes a dataframe to be in the range [0,1], without altering the distribution, using a min-max scale.
+    :param df: dataframe containing the data
+    :retrun normalized dataframe
+    """
+    all_df = df.copy()
+    df.dropna(inplace=True)
+    max = np.max(df, axis=0)
+    min = np.min(df, axis=0)
+    all_df = (all_df-min)/(max-min)
+    return all_df, max.values, min.values
+
 
 def make_dir(file_path):
     '''
