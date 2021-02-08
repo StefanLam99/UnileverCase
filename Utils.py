@@ -131,6 +131,8 @@ def make_latex_table(df, scale=0.6):
     # print the latex table
     print("\\begin{table}[H]")
     print("\\centering")
+    print("\\caption{Look at this table :D}")
+    print("\\label{tab: EnterYourLabel}")
     print("\\scalebox{%.2f}{" % scale)
     print("\\begin{tabular}{" + "l"*n_cols + "} \hline \hline")
     print(first_row)
@@ -206,6 +208,8 @@ def make_latex_table_MultiIndex(df, scale=0.6):
     # print the latex table
     print("\\begin{table}[H]")
     print("\\centering")
+    print("\\caption{Look at this table :D}")
+    print("\\label{tab: EnterYourLabel}")
     print("\\scalebox{%.2f}{" % scale)
     print("\\begin{tabular}{" + "l"*n_cols + "} \hline \hline")
     print(first_row)

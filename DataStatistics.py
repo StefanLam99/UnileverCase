@@ -6,6 +6,7 @@ from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from matplotlib.ticker import NullFormatter
 from time import time
+from scipy import stats
 pd.set_option('display.expand_frame_repr', False)  # dataframes will be printed out without a line break
 
 def get_class_counts(X):
@@ -68,9 +69,9 @@ def get_numerical_statistics(X):
     orig_n_obs = len(X)  # number of observations including missing values
     X = np.array(X)
     X = X[np.logical_not(np.isnan(X))]
-    print('hel')
-    print(len(X))
-    return {'mean': np.mean(X), 'std': np.std(X), 'max': np.max(X), 'min': np.min(X), 'observations': orig_n_obs}
+    #print('hel')
+    #print(len(X))
+    return {'mean': np.mean(X), 'std': np.std(X), 'max': np.max(X), 'min': np.min(X), 'observations': orig_n_obs, 'Jarque-Bera Test': stats.jarque_bera(X).statistic}
 
 
 # ToDO: currently only uses Neighborhood_desscriptives data
