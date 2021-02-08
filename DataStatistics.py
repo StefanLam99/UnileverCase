@@ -2,6 +2,10 @@ import numpy as np
 import pandas as pd
 from DataSets import UFS_Universe_NL, UFS_Universe_NL_ratings, Neighborhood_Descriptives, zipcode_data_2017, zipcode_data_2019
 import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
+from matplotlib.ticker import NullFormatter
+from time import time
 pd.set_option('display.expand_frame_repr', False)  # dataframes will be printed out without a line break
 
 def get_class_counts(X):
@@ -61,8 +65,12 @@ def get_numerical_statistics(X):
     '''
     Method to get the numerical statistics of an one-dimensional array X with floating numbers
     '''
-
-    return {'mean': np.mean(X), 'std': np.std(X), 'max': np.max(X), 'min': np.min(X), 'observations': len(X)}
+    orig_n_obs = len(X)  # number of observations including missing values
+    X = np.array(X)
+    X = X[np.logical_not(np.isnan(X))]
+    print('hel')
+    print(len(X))
+    return {'mean': np.mean(X), 'std': np.std(X), 'max': np.max(X), 'min': np.min(X), 'observations': orig_n_obs}
 
 
 # ToDO: currently only uses Neighborhood_desscriptives data
@@ -89,7 +97,7 @@ def get_numerical_statistics_clusters(X, clusters):
     return dict_cluster_stats
 
 
-def get_numerical_statistics_clusters_df(df, clusters, var_names, stat_names=["mean", "std"]):
+def get_numerical_statistics_clusters_df(df, clusters, var_names, stat_names=["mean", "std", "max", "min"]):
     """
     Method to obtain the statistics of the clusters
     :param df: dataframe with the data
@@ -212,7 +220,47 @@ def get_categorical_counts_clusters_df(df, clusters, var_names):
 
     result_df = pd.DataFrame(result, index=indices_row, columns=indices_col)
     result_df["observations"] = observations
-    return result_df
+    return result_df.astype(int)
+
+def tSNE_visualisation(X, labels, title=""):
+    """
+    Visualises the clusters in a 2D plot bij reducing the dimensions of the original data X
+    to 2 dimensions with t-SNE
+    """
+    t0 = time()
+    print("start t-SNE visualisation...")
+    X_embedded = TSNE(n_components=2, random_state=0).fit_transform(X)
+    fig, ax = plt.subplots()
+    ax.xaxis.set_major_formatter(NullFormatter())
+    ax.yaxis.set_major_formatter(NullFormatter())
+    fig.patch.set_visible(False)
+    ax.axis('off')
+    scatter =ax.scatter(x=X_embedded[:, 0], y=X_embedded[:, 1], cmap='Paired', c=labels)
+    plt.title(title)
+    plt.legend(*scatter.legend_elements(), loc="upper left", title='Cluster', prop={'size': 6}, fancybox=True)
+    plt.show()
+    print("t-SNE visualisation took %.2f seconds" % (time() - t0))
+
+def PCA_visualisation(X, labels, title=""):
+    """
+    Visualises the clusters in a 2D plot bij reducing the dimensions of the original data X
+    to 2 dimensions with PCA
+    """
+    t0 = time()
+    print("start t-SNE visualisation...")
+    X_embedded = PCA(n_components=2, random_state=0).fit_transform(X)
+    fig, ax = plt.subplots()
+    ax.xaxis.set_major_formatter(NullFormatter())
+    ax.yaxis.set_major_formatter(NullFormatter())
+    fig.patch.set_visible(False)
+    ax.axis('off')
+    scatter = ax.scatter(x=X_embedded[:, 0], y=X_embedded[:, 1], cmap='Paired', c=labels)
+    ax.set_title(title)
+    plt.legend(*scatter.legend_elements(), loc="upper left", title='Labels', prop={'size': 6}, fancybox=True)
+    plt.show()
+    print("PCA visualisation took %.2f seconds" % (time() - t0))
+
+
 
 if __name__ == '__main__':
 
@@ -245,18 +293,23 @@ if __name__ == '__main__':
     Example to obtain dataframes of numerical/categorical data:
     '''
     neighbor_data = Neighborhood_Descriptives()
+    data = pd.read_csv("Data/zipcodedata_version_2_nanincluded.csv")
     #  obtain some random cluster:
     np.random.seed(0)
-    random_clusters = np.random.randint(0, 3, np.shape(neighbor_data)[0])
+    random_clusters = np.random.randint(0, 3, np.shape(data)[0])
 
     # numerical data:
-    df_statistics = get_numerical_statistics_clusters_df(neighbor_data, np.array(neighbor_data["NUTS1NAME"]), var_names=["MAN", 'INW_014', 'AANTAL_HH'])
+    df_statistics = get_numerical_statistics_clusters_df(neighbor_data, np.array(neighbor_data["NUTS2NAME"]), var_names=['INW_014', "MAN",  'AANTAL_HH'])
     print(df_statistics)
     print('\n')
 
     # categorical data:
-    df_counts = get_categorical_counts_clusters_df(neighbor_data, np.array(neighbor_data["NUTS1NAME"]), var_names=["DEGURBA", "higher_education", "COASTAL_AREA_yes_no"])
+    df_counts = get_categorical_counts_clusters_df(neighbor_data, np.array(neighbor_data["NUTS2NAME"]), var_names=["DEGURBA", "higher_education", "COASTAL_AREA_yes_no"])
     print(df_counts)
+
+    df_test = get_numerical_statistics_clusters_df(data, random_clusters, var_names=['INW_014', "MAN",  'AANTAL_HH'])
+    print(df_test)
+
 
 
 
