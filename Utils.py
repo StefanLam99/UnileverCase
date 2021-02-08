@@ -1,6 +1,7 @@
 import numpy as np
 import sys
-
+from DataSets import Neighborhood_Descriptives
+from DataStatistics import get_categorical_counts_clusters_df
 def euclidean_distance(x, y):
     """
     Calculates the euclidean distance betwewen x and y
@@ -94,6 +95,155 @@ def make_dir(file_path):
     import os
     if not os.path.exists(dir):
         os.makedirs(dir)
+
+
+def make_latex_table(df, scale=0.6):
+    """
+      Make a latex table from a dataframe
+    """
+    n_cols = len(df.columns) + 2
+
+    # write the first row of the dataframe
+    first_row = ""
+    for i, col_name in enumerate(np.array(df.columns)):
+        if i ==0:
+            first_row += "&&" + col_name
+        else:
+            first_row += "&" + col_name
+    first_row += "\\\\ \hline"
+
+    # write the data of the dataframe
+    data = ""
+    for i, row_name in enumerate(np.array(df.index)):
+        data += str(row_name)
+        for j, element in enumerate(df.loc[row_name]):
+            if j==0:
+                data += "&& %s" % element
+            else:
+                data += "& %s" % element
+        # last row do not end the line:
+        if i < len(np.array(df.index))-1:
+            data += "\\\\ \n"
+        else:
+            data += "\\\\"
+    data += "\hline \hline"
+
+    # print the latex table
+    print("\\begin{table}[H]")
+    print("\\centering")
+    print("\\scalebox{%.2f}{" % scale)
+    print("\\begin{tabular}{" + "l"*n_cols + "} \hline \hline")
+    print(first_row)
+    print(data)
+    print("\\end{tabular}}")
+    print("\\end{table}")
+
+def make_latex_table_MultiIndex(df, scale=0.6):
+    """
+    Make a latex table from a MultiIndex df with two levels/
+    """
+    n_cols = len(df.columns.codes[0]) +len(df.columns.levels[0]) + 1
+    print(n_cols)
+    levels = df.columns.levels
+    codes = df.columns.codes
+    names = df.columns.names
+
+    # write the first row of the multiIndex dataframe
+    (uniques, indices, counts) = np.unique(np.array(codes[0]), return_index=True, return_counts=True)
+    sorted_indices= np.argsort(indices)
+    sorted_counts = counts[sorted_indices]
+    sorted_uniques = uniques[sorted_indices]
+    first_row = "  "
+    c_lines = ""
+    c_start = 3
+    for count, unique in zip(sorted_counts, sorted_uniques):
+        first_row += "&& \multicolumn{%d}{c}{%s} " % (count, np.array(levels[0])[unique])
+        c_end = c_start + count - 1
+        c_lines += "\\cline{%d-%d} " % (c_start, c_end)
+        c_start = c_end + 2
+    first_row += "\\\\" + c_lines
+
+    # write the second row of the multiIndex dataframe
+    second_row = ""
+    current_ncols = 0  # keep track of the current number of columns of the current variable
+    current_index = 0  # keep track of the first index of the current variable
+
+    for i, code in enumerate(codes[1]):
+        if(i == current_ncols):
+            second_row += " && %s " % (levels[1][code])
+            current_ncols += sorted_counts[current_index]
+            current_index+=1
+        else:
+            second_row += " & %s " % (levels[1][code])
+    second_row += "\\\\ \hline"
+
+
+    # write the data of the multiIndex dataframe
+    data = ""
+
+    for i, row_name in enumerate(df.index):
+        current_ncols = 0  # keep track of the current number of columns of the current variable
+        current_index = 0  # keep track of the first index of the current variable
+        data += row_name
+        row = np.array(df.loc[row_name])
+        for j, element in enumerate(row):
+            if (j == current_ncols):
+                data += " && %s " % element
+                current_ncols += sorted_counts[current_index]
+                current_index += 1
+            else:
+                data += " & %s " % element
+
+        # last row do not end the line:
+        if(i<len(df.index)-1):
+            data += "\\\\ \n"
+        else:
+            data += "\\\\"
+    data += "\hline \hline"
+
+
+
+    # print the latex table
+    print("\\begin{table}[H]")
+    print("\\centering")
+    print("\\scalebox{%.2f}{" % scale)
+    print("\\begin{tabular}{" + "l"*n_cols + "} \hline \hline")
+    print(first_row)
+    print(second_row)
+    print(data)
+    print("\\end{tabular}}")
+    print("\\end{table}")
+
+
+if __name__ == '__main__':
+    neighbor_data = Neighborhood_Descriptives()
+    df_counts = get_categorical_counts_clusters_df(neighbor_data, np.array(neighbor_data["NUTS2NAME"]), var_names=["DEGURBA", "higher_education", "COASTAL_AREA_yes_no"])
+
+
+    print(df_counts)
+
+    print(df_counts.columns)
+    print(df_counts.columns.levels)
+    print(neighbor_data.columns[0])
+
+    print("\\")
+    (unique, indices, counts) = np.unique(list(df_counts.columns.codes[0]), return_index=True, return_counts=True)
+    print(unique[0])
+    print(np.array(df_counts.columns.codes[0]))
+    print(set(np.array(df_counts.columns.codes[0])))
+    print(unique)
+    print(indices)
+    print(counts)
+    print(df_counts.index[0])
+    a = df_counts.index[0]
+    print(np.array(df_counts.loc[a]))
+    print(neighbor_data.columns)
+    print(neighbor_data.index)
+    make_latex_table(neighbor_data.iloc[1:5,1:5])
+    make_latex_table_MultiIndex(df_counts)
+
+
+
 
 
 
