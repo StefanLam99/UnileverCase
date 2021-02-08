@@ -13,7 +13,6 @@ parameters {
   real<lower=0> sigma[n_cluster];
   
   matrix[K, D] error_raw[n_cluster];
-  real mu_raw_hat[n_cluster];
 }
 transformed parameters{
   matrix[K,D] beta[n_cluster];
@@ -29,7 +28,7 @@ transformed parameters{
           mu[c, 1, d]=0; }
 
   for(c in 1:n_cluster)
-      beta[c,,] = mu[c,,] + mu_raw_hat[c] * error[c,,];
+      beta[c,,] = mu[c,,] + error[c,,];
   // print("mu: ", mu);
   // print("beta: ", beta);
 }
@@ -39,7 +38,7 @@ model {
   for(n in 1:N)
           x_beta[n] = x[n,] * to_matrix(beta[cluster[n],,])';
 
-  mu_raw_hat ~ normal(0,1);
+
 
   for(c in 1:n_cluster){
     to_vector(error_raw[c,,]) ~ normal(0, sigma[c]);

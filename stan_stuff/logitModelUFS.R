@@ -113,10 +113,15 @@ compare_multinom_stan(y, X, res.stan, res.multinom)
 multinom_unpooled <- function(y, df, cluster, current_cluster){
   res.multinom <- multinom(y[cluster==current_cluster]~., data = df[cluster==current_cluster,])
 }
-multinom.out <- multinom_unpooled(y,X,cluster,1)
+multinom.out <- multinom_unpooled(y,X,cluster,3)
 
 #Estimate Bayesian Model
-b.out <- stan(file='./stan_stuff/unpooledmultilog.stan', data = datlist.unpooled, iter = 1000, chains = 1)
+b7.out <- stan(file='./stan_stuff/multilog_based_on_mcstan.stan', data = datlist.unpooled, iter = 1000, chains = 1)
+#B1 out was original, same parameters as multinom but lower se
+#B2 out is addition of mu matrix of dimension KDN_C takes very long, somehow different parameters even tho mu = 0
+#B3 is addition fo mu rowvector 
+#B4 is mu rowvector that is not zero
+#B5 mu and error cluster dependent, should be same as b1. 
 
 # launch_shinystan(b.out)
 resunpooled.stan <- summary(b.out, par="beta", probs=.5)$summary %>% as.data.frame

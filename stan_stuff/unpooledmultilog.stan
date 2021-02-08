@@ -11,14 +11,22 @@ data {
 
 parameters {
         matrix[K,D] beta_raw[n_cluster]; //Beta coefficients for k groups (without the zeros)
+        
 }
 
 transformed parameters {
         matrix[K, D] beta[n_cluster];
-        beta = beta_raw;
-        for (c in 1:n_cluster)
+
+        for(c in 1:n_cluster){
+                beta[c,,] = beta_raw[c,,];
+        }
+        
+        for (c in 1:n_cluster){
                 for (d in 1:D)
                         beta[c, 1, d] = 0;
+        }
+        
+        
         // print(beta[cluster[20],,]);
 }
 
