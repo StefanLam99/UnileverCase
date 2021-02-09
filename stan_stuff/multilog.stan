@@ -23,7 +23,7 @@ transformed parameters {
 
 model {
         matrix[N, K] x_beta = x * beta';
-        sigma~normal(0,1);
+        sigma~normal(10,1);
         to_vector(beta_raw) ~ normal(0, sigma); //Random prior, with more information we can specify this clearer.
         
         for (n in 1:N)
