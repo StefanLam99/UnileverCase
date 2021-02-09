@@ -116,7 +116,7 @@ multinom_unpooled <- function(y, df, cluster, current_cluster){
 multinom.out <- multinom_unpooled(y,X,cluster,3)
 
 #Estimate Bayesian Model
-b7.out <- stan(file='./stan_stuff/multilog_based_on_mcstan.stan', data = datlist.unpooled, iter = 1000, chains = 1)
+b8.out <- stan(file='./stan_stuff/multilog_based_on_mcstan.stan', data = datlist.unpooled, iter = 1000, chains = 1)
 #B1 out was original, same parameters as multinom but lower se
 #B2 out is addition of mu matrix of dimension KDN_C takes very long, somehow different parameters even tho mu = 0
 #B3 is addition fo mu rowvector 

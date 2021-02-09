@@ -11,7 +11,7 @@ data {
 
 parameters {
         matrix[K,D] beta_raw[n_cluster]; //Beta coefficients for k groups (without the zeros)
-        
+        real<lower=0> sigma[n_cluster];
 }
 
 transformed parameters {
@@ -33,11 +33,12 @@ transformed parameters {
 
 model {
         matrix[N, K] x_beta;
+        sigma~normal(0,10);
         for(n in 1:N)
                 x_beta[n] = x[n,] * (beta[cluster[n],,])';
 
         for(c in 1:n_cluster)
-                to_vector(beta_raw[c,,]) ~ normal(0, 10); //Random prior, with more information we can specify this clearer.
+                to_vector(beta_raw[c,,]) ~ normal(0, sigma[c]); //Random prior, with more information we can specify this clearer.
 
         for (n in 1:N)
                 y[n] ~ categorical_logit(x_beta[n]');

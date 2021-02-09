@@ -15,6 +15,8 @@ parameters {
   vector<lower=0>[K] sigma_beta; 
 
   matrix[K,D] beta[n_cluster];
+  
+  real<lower=0> sigma[D];
 }
 
 
@@ -22,11 +24,11 @@ parameters {
 model {
   matrix[N, K] x_beta;
 // 
-  sigma_beta ~ cauchy(0,100);
+  sigma_beta ~ cauchy(0,5);
   Lcorr_beta ~ lkj_corr_cholesky(100);
-  
+  sigma~normal(0,5);
   for (d in 1:D) {
-    mu[,d] ~ normal(0, 20);
+    mu[,d] ~ normal(0, sigma[d]);
     // print("mu", mu[,d]); 
     for (c in 1:n_cluster){
        // beta[c, ,d] ~ normal(mu[,d], sigma[d]);
