@@ -64,7 +64,7 @@ def main_preprocessing():
 
     # save data
     version = 4  # specify version
-    final_data.to_csv("Data/zipcodedata_version_" + str(version) + "_nanincluded.csv")
+    final_data.to_csv("Data/zipcodedata_version_" + str(version) + "_nanincluded.csv", index=False)
     print(final_data)
 
 
