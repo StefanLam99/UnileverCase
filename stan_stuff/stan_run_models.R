@@ -13,21 +13,24 @@ setwd("C:/Users/bartd/Erasmus/Erasmus_/Jaar 4/Master Econometrie/Seminar/Unileve
 
 ####DATA####
 ##LOAD DATA
-# X_df <- read.csv("./Data/preprocessedData/X.csv")
-WX_df <- read.csv("./Data/preprocessedData/WX.csv")
-# W_df <- read.csv("./Data/preprocessedData/W.csv")
-y_df <- read.csv("./Data/preprocessedData/y.csv", header = FALSE)
+WX_df_train <- read.csv("./Data/preprocessedData/WX_tr_re.csv")
+y_df_train <- read.csv("./Data/preprocessedData/y_tr_re.csv", header = FALSE)
+WX_df_test <-read.csv("./Data/preprocessedData/WX_test.csv")
+y_df_test <- read.csv("./Data/preprocessedData/y_test.csv", header = FALSE)
 
-#SCALE
-WX_df$INWONER_scaled <- as.array(scale(WX_df$INWONER), col.names = "INWONER_scaled")
-WX_df$medianinc_scaled <- as.array(scale(WX_df$INWONER), col.names = "median_inc")
+  #SCALE
+  WX_df_train$INWONER_scaled <- as.array(scale(WX_df_train$INWONER), col.names = "INWONER_scaled")
+WX_df_train$medianinc_scaled <- as.array(scale(WX_df_train$INWONER), col.names = "median_inc")
 
 ##Choose columns of interest (Can also be done in python)
-colnames(y_df) <- c('name', 'DV')
+colnames(y_df_train) <- c('name', 'DV')
+colnames(y_df_test)<-c('name', 'DV')
 W_interest <- c("INWONER", "higher_education")
 X_interest <- c("globalChannel_fastfood", "globalChannel_other", "rating")
-WX_interest <- c("AV5_HORECA", "globalChannel_fastfood", "globalChannel_other", 
+WX_interest <- c("INWONER", "GEM_HH_GR", "AV5_HORECA", "OAD", 
+                 "median_inc", "globalChannel_fastfood", "globalChannel_other", 
                  "rating")
+
 WX_interest <- c("INWONER", "GEM_HH_GR", "AV5_HORECA")
 # WX_interest<- c("INWONER", "GEM_HH_GR", "AV5_HORECA", "OAD", "median_inc",
 #                 "globalChannel_fastfood", "globalChannel_other",
@@ -35,23 +38,26 @@ WX_interest <- c("INWONER", "GEM_HH_GR", "AV5_HORECA")
 WX_interest <- c(X_interest, "GEM_HH_GR", "INWONER_scaled", 'medianinc_scaled')
 # WX_interest<-c(X_interest)
 
-small_subset <- c(1:1000)
+small_subset <- c(1:38199)
+sample_length = round(1000/3)
 
 #Equal sample
-ind_operational <- which(y_df$DV=="OPERATIONAL", arr.ind=TRUE)
-ind_perm <- which(y_df$DV=="CLOSED_PERMANENTLY", arr.ind=TRUE)
-ind_temp<- which(y_df$DV=="CLOSED_TEMPORARILY", arr.ind=TRUE)
-small_subset <- c(ind_perm[1:500], ind_temp, sample(ind_operational, length(ind_perm))[1:500])
+ind_operational <- which(y_df_train$DV==1, arr.ind=TRUE)
+ind_perm <- which(y_df_train$DV==2, arr.ind=TRUE)
+ind_temp<- which(y_df_train$DV==3, arr.ind=TRUE)
+small_subset <- c(sample(ind_perm, sample_length), 
+                  sample(ind_temp, sample_length),
+                  sample(ind_operational, sample_length))
 
 ##Obtain dataframes that will be used in analysis, assume that missing values have
 ##been handled in python
-y <- factor(y_df$DV)
+y <- factor(y_df_train$DV)
 y <- y[small_subset]
 # X <- X_df[small_subset,X_interest]
-WX <- WX_df[small_subset,WX_interest]
+WX <- WX_df_train[small_subset,WX_interest]
 # W <- W_df[small_subset,W_interest]
 cluster <- sample(1:3, length(small_subset), replace=TRUE)
-cluster <- WX_df$cluster[small_subset]
+cluster <- WX_df_train$cluster[small_subset]
 
 
 datlist <- list(N=nrow(WX),           #Nr of obs
