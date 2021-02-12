@@ -1,9 +1,11 @@
 data {
         int K; //Number of possible outcomes/levels
         int N; //Number of observations
+        int N_test; //Number test observations
         int D; //Number of predictors
         int y[N];
         matrix[N, D] x; //predictor matrix
+        matrix[N_test, D] x_test; //test matrix
 }
 
 
@@ -31,14 +33,18 @@ model {
 
 generated quantities {
         int y_pred_insample[N];
-        vector[K] y_pred_soft[N];
-        real log_lik[N];
+        int y_pred_outsample[N_test];
         
         matrix[N, K] x_beta_train = x * beta';
+        matrix[N_test, K] x_beta_test = x_test * beta';
+        
         for (n in 1:N){
           y_pred_insample[n] = categorical_logit_rng(x_beta_train[n]');
-          y_pred_soft[n] = softmax(x_beta_train[n]');
-          log_lik[n] = categorical_lpmf(y[n]|softmax(x_beta_train[n]'));
+        }
+        
+        
+        for (n in 1:N_test){
+                y_pred_outsample[n] = categorical_logit_rng(x_beta_test[n]');
         }
 
 }

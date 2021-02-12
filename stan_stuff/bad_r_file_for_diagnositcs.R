@@ -5,8 +5,8 @@ library('loo')
 
 bml_nc <-readRDS("./stan_stuff/stan_model_output/bml_nc.rds")
 
-fit3 <- bh_identified_more.out
-fit.ext <- extract(fit)
+fit <- b_equal.out
+fit.ext <- rstan::extract(fit)
 fit.mat <-as.matrix(fit)
 
 
@@ -50,6 +50,30 @@ comp <- loo_compare(x = list(loo_1, loo_2))
 
 
 print(comp)
+
+####predictions
+
+getmode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+prediction_median <- apply(fit.ext$y_pred_insample, 2, median)
+prediction_mean <- round(apply(fit.ext$y_pred_insample, 2, mean))
+prediction_mode <- apply(fit.ext$y_pred_outsample, 2, getmode)
+
+print(mean(prediction_mode == y_test))
+cont_table <- table(prediction_mode, y_test)
+cont_table <- (rbind(cont_table, apply(cont_table, 2, sum)))
+cont_table <- cbind(cont_table, apply(cont_table,1, sum))
+cont_table
+
+
+
+
+
+
+
 
 fit_summary <-summary(fit)
 print(names(fit_summary))
