@@ -62,8 +62,8 @@ prediction_median <- apply(fit.ext$y_pred_insample, 2, median)
 prediction_mean <- round(apply(fit.ext$y_pred_insample, 2, mean))
 prediction_mode <- apply(fit.ext$y_pred_outsample, 2, getmode)
 
-print(mean(prediction_mode == y_test))
-cont_table <- table(prediction_mode, y_test)
+print(mean(prediction_mode == datlist$y_test))
+cont_table <- table(prediction_mode, datlist$y_test)
 cont_table <- (rbind(cont_table, apply(cont_table, 2, sum)))
 cont_table <- cbind(cont_table, apply(cont_table,1, sum))
 cont_table
