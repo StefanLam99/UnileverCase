@@ -25,21 +25,36 @@ transformed parameters {
                 for (d in 1:D)
                         beta[c, 1, d] = 0;
         }
-        
-        
-        // print(beta[cluster[20],,]);
 }
 
 
 model {
         matrix[N, K] x_beta;
-        sigma~normal(0,10);
-        for(n in 1:N)
-                x_beta[n] = x[n,] * (beta[cluster[n],,])';
+        to_vector(sigma)~gamma(2,2);
 
         for(c in 1:n_cluster)
                 to_vector(beta_raw[c,,]) ~ normal(0, sigma[c]); //Random prior, with more information we can specify this clearer.
 
-        for (n in 1:N)
+        for (n in 1:N){
+                x_beta[n] = x[n,] * (beta[cluster[n],,])';
                 y[n] ~ categorical_logit(x_beta[n]');
+        }
+                
+}
+
+
+generated quantities {
+        int y_pred_insample[N];
+        vector[K] y_pred_soft[N];
+        real log_lik[N];
+        
+        matrix[N, K] x_beta_train; 
+        
+        for (n in 1:N){
+                x_beta_train[n] = x[n,] * (beta[cluster[n],,])';
+                y_pred_insample[n] = categorical_logit_rng(x_beta_train[n]');
+                y_pred_soft[n] = softmax(x_beta_train[n]');
+                log_lik[n] = categorical_lpmf(y[n]|softmax(x_beta_train[n]'));
+        }
+
 }

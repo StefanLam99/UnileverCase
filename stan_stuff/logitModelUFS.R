@@ -22,9 +22,10 @@ y_df <- read.csv("./Data/preprocessedData/y.csv", header = FALSE)
 colnames(y_df) <- c('name', 'DV')
 W_interest <- c("INWONER", "higher_education")
 X_interest <- c("globalChannel_fastfood", "globalChannel_other", "rating")
-WX_interest <- c(W_interest, X_interest)
+# WX_interest <- c(W_interest, X_interest)
+WX_interest <- X_interest
 
-small_subset <- c(1:500)
+small_subset <- c(1:200)
 ##Obtain dataframes that will be used in analysis, assume that missing values have
 ##been handled in python
 y <- factor(y_df$DV)
@@ -74,7 +75,7 @@ res.multinom <- multinom(y~., data = X, Hess = TRUE)
 
 
 # estimate Stan model
-b.out <- stan(file='./stan_stuff/multilog.stan',
+bgam_cons.out <- stan(file='./stan_stuff/multilog.stan',
               data=datlist,
               iter = 1000,
               chains = 2,
