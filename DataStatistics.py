@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from matplotlib.ticker import NullFormatter
+from Utils import make_dir
 from time import time
 from scipy import stats
 pd.set_option('display.expand_frame_repr', False)  # dataframes will be printed out without a line break
@@ -69,9 +70,8 @@ def get_numerical_statistics(X):
     orig_n_obs = len(X)  # number of observations including missing values
     X = np.array(X)
     X = X[np.logical_not(np.isnan(X))]
-    #print('hel')
-    #print(len(X))
-    return {'mean': np.mean(X), 'std': np.std(X), 'max': np.max(X), 'min': np.min(X), 'observations': orig_n_obs, 'Jarque-Bera Test': stats.jarque_bera(X).statistic}
+    return {'mean': np.mean(X), 'std': np.std(X), 'max': np.max(X), 'min': np.min(X), 'observations': orig_n_obs, 'Jarque-Bera Test': stats.jarque_bera(X)[0]}
+
 
 
 # ToDO: currently only uses Neighborhood_desscriptives data
@@ -132,7 +132,7 @@ def get_numerical_statistics_clusters_df(df, clusters, var_names, stat_names=["m
     # make the dataframe
     result_df = pd.DataFrame(result, index=indices_row, columns=indices_col)
     result_df["observations"] = observations  # add observations to the second level of the last column
-    return result_df
+    return result_df.round(3)
 
 
 def show_numerical_statistics_clusters(X, clusters):
@@ -223,44 +223,35 @@ def get_categorical_counts_clusters_df(df, clusters, var_names):
     result_df["observations"] = observations
     return result_df.astype(int)
 
-def tSNE_visualisation(X, labels, title=""):
-    """
-    Visualises the clusters in a 2D plot bij reducing the dimensions of the original data X
-    to 2 dimensions with t-SNE
-    """
-    t0 = time()
-    print("start t-SNE visualisation...")
-    X_embedded = TSNE(n_components=2, random_state=0).fit_transform(X)
-    fig, ax = plt.subplots()
-    ax.xaxis.set_major_formatter(NullFormatter())
-    ax.yaxis.set_major_formatter(NullFormatter())
-    fig.patch.set_visible(False)
-    ax.axis('off')
-    scatter =ax.scatter(x=X_embedded[:, 0], y=X_embedded[:, 1], cmap='Paired', c=labels)
-    plt.title(title)
-    plt.legend(*scatter.legend_elements(), loc="upper left", title='Cluster', prop={'size': 6}, fancybox=True)
-    plt.show()
-    print("t-SNE visualisation took %.2f seconds" % (time() - t0))
 
-def PCA_visualisation(X, labels, title=""):
+def plot_clusters(X_embedded, labels, title="", save_path=None, s=1):
     """
     Visualises the clusters in a 2D plot bij reducing the dimensions of the original data X
     to 2 dimensions with PCA
     """
-    t0 = time()
-    print("start t-SNE visualisation...")
-    X_embedded = PCA(n_components=2, random_state=0).fit_transform(X)
+    n_plots = len(labels)
+    ''' 
+    # sort the labels and data so we can get the same colors for multiple plots:
+    sort_indices = np.argsort(labels)
+    X_sorted = X_embedded[sort_indices]
+    labels_sorted = labels[sort_indices]
+    '''
+    #  make the plots
     fig, ax = plt.subplots()
     ax.xaxis.set_major_formatter(NullFormatter())
     ax.yaxis.set_major_formatter(NullFormatter())
     fig.patch.set_visible(False)
     ax.axis('off')
-    scatter = ax.scatter(x=X_embedded[:, 0], y=X_embedded[:, 1], cmap='Paired', c=labels)
+    # scatter = ax.scatter(x=X_sorted[:, 0], y=X_sorted[:, 1], cmap="Paired", c=labels_sorted, s=1, vmin=0, vmax=6)
+    scatter = ax.scatter(x=X_embedded[:, 0], y=X_embedded[:, 1], cmap="Paired", c=labels, s=s, vmin=0, vmax=6)
     ax.set_title(title)
-    plt.legend(*scatter.legend_elements(), loc="upper left", title='Labels', prop={'size': 6}, fancybox=True)
-    plt.show()
-    print("PCA visualisation took %.2f seconds" % (time() - t0))
+    ax.legend(*scatter.legend_elements(), loc="upper left", title='Cluster', prop={'size': 10}, fancybox=True)
 
+    if save_path != None:
+        make_dir(save_path)
+        plt.savefig(save_path)
+    #fig.set_size_inches(8, 8)
+    plt.show()
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 import numpy as np
 import sys
-from DataSets import Neighborhood_Descriptives
-from DataStatistics import get_categorical_counts_clusters_df
+
+
 def euclidean_distance(x, y):
     """
     Calculates the euclidean distance betwewen x and y
@@ -72,7 +72,7 @@ def infer_data_labels(pred_clusters, cluster_labels):
 
     return predicted_labels
 
-def normalize(df):
+def normalise(df):
     """
     Normalizes a dataframe to be in the range [0,1], without altering the distribution, using a min-max scale.
     :param df: dataframe containing the data
@@ -219,32 +219,7 @@ def make_latex_table_MultiIndex(df, scale=0.6):
     print("\\end{table}")
 
 
-if __name__ == '__main__':
-    neighbor_data = Neighborhood_Descriptives()
-    df_counts = get_categorical_counts_clusters_df(neighbor_data, np.array(neighbor_data["NUTS2NAME"]), var_names=["DEGURBA", "higher_education", "COASTAL_AREA_yes_no"])
 
-
-    print(df_counts)
-
-    print(df_counts.columns)
-    print(df_counts.columns.levels)
-    print(neighbor_data.columns[0])
-
-    print("\\")
-    (unique, indices, counts) = np.unique(list(df_counts.columns.codes[0]), return_index=True, return_counts=True)
-    print(unique[0])
-    print(np.array(df_counts.columns.codes[0]))
-    print(set(np.array(df_counts.columns.codes[0])))
-    print(unique)
-    print(indices)
-    print(counts)
-    print(df_counts.index[0])
-    a = df_counts.index[0]
-    print(np.array(df_counts.loc[a]))
-    print(neighbor_data.columns)
-    print(neighbor_data.index)
-    make_latex_table(neighbor_data.iloc[1:5,1:5])
-    make_latex_table_MultiIndex(df_counts)
 
 
 

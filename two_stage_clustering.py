@@ -54,7 +54,7 @@ class TwoStageClustering:
         """
 
         # training first stage SOM network
-        print("Start training the two stage clustering procedure...")
+        print("Start training the two stage clustering procedure with %s..." % self.clus_method)
         t0 = time()  # starting time training SOM
         self.model_SOM.train(print_progress=print_progress)
         W = self.model_SOM.map  # 3D array containing the M prototypes
@@ -64,7 +64,6 @@ class TwoStageClustering:
         print("Training %s clustering method..." % self.clus_method)
         self.model_clus.fit(W.reshape((self.M, self.d)))  # reshape to a (M, d) matrix
         print("%s clustering method with %d iterations finished in %.3f seconds" %(self.clus_method, self.max_iter_clus, time()-t1))
-        print('\n')
         print("The two stage clustering procedure with %s took %.3f" % (self.clus_method, time()-t0))
 
     def predict(self, X):
