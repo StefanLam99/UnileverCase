@@ -97,7 +97,7 @@ def make_dir(file_path):
         os.makedirs(dir)
 
 
-def make_latex_table(df, scale=0.6):
+def make_latex_table(df, scale=0.6, caption="", label=""):
     """
       Make a latex table from a dataframe
     """
@@ -131,8 +131,8 @@ def make_latex_table(df, scale=0.6):
     # print the latex table
     print("\\begin{table}[H]")
     print("\\centering")
-    print("\\caption{Look at this table :D}")
-    print("\\label{tab: EnterYourLabel}")
+    print("\\caption{" + caption + "}")
+    print("\\label{tab:" + label + "}")
     print("\\scalebox{%.2f}{" % scale)
     print("\\begin{tabular}{" + "l"*n_cols + "} \hline \hline")
     print(first_row)
@@ -140,7 +140,7 @@ def make_latex_table(df, scale=0.6):
     print("\\end{tabular}}")
     print("\\end{table}")
 
-def make_latex_table_MultiIndex(df, scale=0.6):
+def make_latex_table_MultiIndex(df, scale=0.6, caption="", label=""):
     """
     Make a latex table from a MultiIndex df with two levels/
     """
@@ -208,8 +208,8 @@ def make_latex_table_MultiIndex(df, scale=0.6):
     # print the latex table
     print("\\begin{table}[H]")
     print("\\centering")
-    print("\\caption{Look at this table :D}")
-    print("\\label{tab: EnterYourLabel}")
+    print("\\caption{" + caption + "}")
+    print("\\label{tab:" + label + "}")
     print("\\scalebox{%.2f}{" % scale)
     print("\\begin{tabular}{" + "l"*n_cols + "} \hline \hline")
     print(first_row)

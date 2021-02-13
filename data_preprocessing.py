@@ -56,7 +56,15 @@ def main_preprocessing():
 
 
     # other relevant variables
-    variable_names = [ "OAD", "P_NL_ACHTG", "P_WE_MIG_A", "P_NW_MIG_A", "GEM_HH_GR", "UITKMINAOW", "P_LINK_HH", "P_HINK_HH", "median_inc"]
+    '''
+    food_names = ["AV1_CAFE", "AV1_CAFTAR", "AV1_RESTAU", "AV3_CAFE", "AV3_CAFTAR", "AV3_RESTAU", "AV5_CAFE", "AV5_CAFTAR", "AV5_HOTEL", "AV5_RESTAU"]
+    for name in food_names:
+        final_data[name] = food_data[name]
+    '''
+
+    variable_names = ["OAD", "P_NL_ACHTG", "P_WE_MIG_A", "P_NW_MIG_A", "GEM_HH_GR", "UITKMINAOW", "P_LINK_HH",
+                      "P_HINK_HH", "median_inc"]
+
     for name in variable_names:
         final_data[name] = data_v3[name]
     final_data["log_median_inc"] = np.log(final_data["median_inc"])
