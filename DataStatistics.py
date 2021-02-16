@@ -58,24 +58,23 @@ def pie_plot(X, name = '', cmap= 'tab20'):
                ['%s: %1.1f%%' % (cl, (float(val)/n)*100) for cl, val in zip(sorted_classes, sorted_values)],
                loc= "center right", bbox_to_anchor=(1, 0.5), bbox_transform=plt.gcf().transFigure)
     plt.subplots_adjust(left=0.125, bottom=0.1, right=0.6)
-    plt.title(name +'\n observations = ' + str(n))
+    plt.title(name +'\n Observations = ' + str(n))
     plt.show()
 
 
 # ToDO: add more numerical statistics
-def get_numerical_statistics(X):
+def get_numerical_statistics(X, round=3):
     '''
     Method to get the numerical statistics of an one-dimensional array X with floating numbers
     '''
     orig_n_obs = len(X)  # number of observations including missing values
     X = np.array(X)
     X = X[np.logical_not(np.isnan(X))]
-    return {'mean': np.mean(X), 'std': np.std(X), 'median': np.median(X), 'max': np.max(X), 'min': np.min(X), 'observations': orig_n_obs, 'Jarque-Bera Test': stats.jarque_bera(X)[0]}
+    return {'mean': np.round(np.mean(X), round), 'std': np.round(np.std(X), round), 'median': np.round(np.median(X), round)
+        , 'max': np.round(np.max(X), round), 'min': np.round(np.min(X), round), 'Observations': orig_n_obs, 'Jarque-Bera Test': stats.jarque_bera(X)[0]}
 
 
-
-# ToDO: currently only uses Neighborhood_desscriptives data
-def get_numerical_statistics_clusters(X, clusters):
+def get_numerical_statistics_clusters(X, clusters, round=3):
     '''
     Method to get the numerical statistics of each cluster in an one-dimensional array X with floats,
     where a cluster corresponds to certain pc4 codes. Returns a dictionary....
@@ -93,47 +92,119 @@ def get_numerical_statistics_clusters(X, clusters):
     # make a dictionary which will get all the statistics of a cluster:
     dict_cluster_stats = {}
     for key in dict_clusters.keys():
-        dict_cluster_stats[key] = get_numerical_statistics(dict_clusters[key])
+        dict_cluster_stats[key] = get_numerical_statistics(dict_clusters[key], round=3)
 
     return dict_cluster_stats
 
 
-def get_numerical_statistics_clusters_df(df, clusters, var_names, stat_names=["mean", "std", "max", "min"]):
+def get_numerical_statistics_clusters_df(df, clusters, var_names, stat_names=["mean", "std", "max", "min"], round=3):
     """
     Method to obtain the statistics of the clusters
     :param df: dataframe with the data
     :param clusters: array with the corresponding cluster for each observation in df
     :param var_names: the names of the variables to put in the dataframe
     :param stat_names: the statistics we want, choice: "mean". "std", "max", "min, "observations
+    :param round: the number of decimals to round
     :return: a MultiIndex dataframe
     """
     #  determine number of clusters, variables, statistics and the size of the data
     n_clusters = len(set(clusters))
     n_vars = len(var_names)
     n_stats = len(stat_names)
-    result = np.zeros((n_clusters, n_vars * n_stats))
+    result = np.zeros((n_clusters + 1, n_vars * n_stats))
 
     #  Make the indices for the row and columns of the dataframe
     dict_clusters = get_numerical_statistics_clusters(df[var_names[0]], clusters)
     indices_row = ["cluster " + str(e) for e in dict_clusters.keys()]
+    indices_row += ["total"]
     #indices_row = ["cluster " + str(int(i)) for i in range(n_clusters)]
     iterables =[var_names, stat_names]
     indices_col = pd.MultiIndex.from_product(iterables, names=["variable", "statistic"])
 
-    # get the values
-    observations = np.zeros(n_clusters)
+    # get the values for each cluster
+    observations = np.zeros(n_clusters+1)
     for i, var in enumerate(var_names):
-        dict_clusters = get_numerical_statistics_clusters(df[var], clusters)
+        dict_clusters = get_numerical_statistics_clusters(df[var], clusters, round=3)
         for j, cluster in enumerate(dict_clusters.keys()):  # might not be sorted, so do it in this way
-            observations[j] = dict_clusters[cluster]["observations"]
+            observations[j] = dict_clusters[cluster]["Observations"]
             for k, stat in enumerate(stat_names):
                 result[j, i*n_stats+k] = dict_clusters[cluster][stat]
 
+    # get the values for all cluster together
+    for i, var in enumerate(var_names):
+        dict = get_numerical_statistics(df[var], round=3)
+        for k, stat in enumerate(stat_names):
+            result[n_clusters, i*n_stats+k] = dict[stat]
+    observations[n_clusters] = np.shape(df)[0]
+
     # make the dataframe
     result_df = pd.DataFrame(result, index=indices_row, columns=indices_col)
-    result_df["observations"] = observations  # add observations to the second level of the last column
-    return result_df.round(3)
+    result_df.insert(0, "Observations", observations)
+    #result_df["observations"] = observations  # add observations to the second level of the last column
+    return result_df.round(round)
 
+def get_numerical_statistics_clusters_df_inversed(df, clusters, dict_var_names, stat_names=["mean", "std", "max", "min"], round=3):
+    """
+    Method to obtain the statistics of the clusters
+    :param df: dataframe with the data
+    :param clusters: array with the corresponding cluster for each observation in df
+    :param dict_var_names: keys are variable type, values are the variable names. (to be put in the df)
+    :param stat_names: the statistics we want, choice: "mean". "std", "max", "min, "observations
+    :param round: the number of decimals to round
+    :return: a MultiIndex dataframe
+    """
+    #  determine number of clusters, variables, statistics and the size of the data
+    n_clusters = len(set(clusters))
+    n_groups = len(dict_var_names)
+    n_vars = np.sum([len(x) for x in dict_var_names.values()])
+    n_stats = len(stat_names)
+    result = np.zeros((n_vars + n_groups+1, (n_clusters + 1)*n_stats))
+
+    #  Make the indices for the row and columns of the dataframe
+    indices_row = []
+    for key in dict_var_names.keys():
+        indices_row += [key]
+        for var in dict_var_names[key]:
+            indices_row += [var]
+    indices_row += ["Observations"]
+
+
+    columns = ["cluster " + str(int(e)) for e in range(n_clusters)]
+    columns += ["Overall"]
+    #indices_row = ["cluster " + str(int(i)) for i in range(n_clusters)]
+    iterables =[columns, stat_names]
+    indices_col = pd.MultiIndex.from_product(iterables, names=["variable", "statistic"])
+
+    # get the values for each cluster
+    observations = np.zeros(n_clusters+1)
+    i = 0  # keep track of current row
+    for l, key in enumerate(dict_var_names):
+        i += 1  # skip the group name row
+        for var in dict_var_names[key]:
+            dict_clusters = get_numerical_statistics_clusters(df[var], clusters, round=3)
+            for j, cluster in enumerate(dict_clusters.keys()):  # might not be sorted, so do it in this way
+                observations[j] = dict_clusters[cluster]["Observations"]
+                for k, stat in enumerate(stat_names):
+                    result[i, j*n_stats+k] = dict_clusters[cluster][stat]
+            i+=1
+
+    # get the values for all cluster together
+    i = 0  # keep track of current row
+    for l, key in enumerate(dict_var_names):
+        i+=1  # skip the group name row
+        for var in dict_var_names[key]:
+            dict = get_numerical_statistics(df[var], round=3)
+            for k, stat in enumerate(stat_names):
+                result[i, n_clusters*n_stats + k] = dict[stat]
+            i+=1
+    observations[n_clusters] = np.shape(df)[0]
+
+    # add observation row
+    for i, observation in enumerate(observations):
+        result[n_groups + n_vars, i*n_stats] = observation
+
+    result_df = pd.DataFrame(result, index=indices_row, columns=indices_col)
+    return result_df.round(round)
 
 def show_numerical_statistics_clusters(X, clusters):
     '''
@@ -220,7 +291,7 @@ def get_categorical_counts_clusters_df(df, clusters, var_names):
         cur_len_cols +=len(set(df[var_name]))
 
     result_df = pd.DataFrame(result, index=indices_row, columns=indices_col)
-    result_df["observations"] = observations
+    result_df["Observations"] = observations
     return result_df.astype(int)
 
 

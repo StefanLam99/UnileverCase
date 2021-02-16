@@ -5,7 +5,7 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 from scipy import stats
 from sklearn.preprocessing import minmax_scale
-from Utils import normalise, make_latex_table, make_latex_table_MultiIndex
+from Utils import *
 from SOM import SOM
 from time import time
 from DataStatistics import *
@@ -92,17 +92,17 @@ def main_statistics():
     df = get_numerical_statistics_clusters_df(data, clusters=labels, var_names=var_names, stat_names=stat_names)
     print(df)
 
+
 def main_results():
+
+
     # data
     data = pd.read_csv("Data/zipcodedata_KNN_version_4.csv")
-    print(data)
-    data_normalised = pd.read_csv("Data/zipcodedata_KNN_normalized_version_4.csv")
     data_normalised, _, _ = normalise(data)
-    print(data_normalised)
     X = data_normalised.iloc[:,1:].values  # exclude pc4 variable
-    opt_k = [4, 6, 5, 5]   # the optimal k in the order: two-stage-kmeans, two-stage-GMM, kmeans, GMM
-    #var_names = ["INWONER", "P_INW_014", "P_INW_1524", "P_INW_2544", "P_INW_4564", "P_INW_65PL", "P_NL_ACHTG", "P_WE_MIG_A", "P_NW_MIG_A",
-    #             "GEM_HH_GR", "UITKMINAOW", "OAD", "P_LINK_HH", "P_HINK_HH", "AV5_CAFE", "AV5_CAFTAR", "AV5_HOTEL", "AV5_RESTAU", "log(median_inc)"]
+
+    # parameters
+    opt_k = [2, 2, 2, 2]   # the optimal k in the order: two-stage-kmeans, two-stage-GMM, kmeans, GMM
     var_names = data.columns[1:]  # exclude pc4
     stat_names = ["mean", "std"]
     titles = ["SOM + k-means", "SOM + GMM", "k-means", "GMM"]
@@ -114,6 +114,36 @@ def main_results():
     X_tSNE = TSNE(n_components=2, random_state=0).fit_transform(X)
     X_PCA = PCA(n_components=2, random_state=0).fit_transform(X)
 
+    # models
+    models = [TwoStageClustering(X=X, n_clusters=opt_k[0]),
+              TwoStageClustering(X=X, n_clusters=opt_k[1], clus_method="gmm"),
+              KMeans(n_clusters=opt_k[2], random_state=0, algorithm="full", max_iter=5000, n_init=10),
+              GaussianMixture(n_components=opt_k[3], max_iter=5000, n_init=10, init_params="random")]
+
+    for i, model in enumerate(models):
+        if i < 2:  # first two models are two-stage models
+            model.train(print_progress=False)
+        else:
+            model.fit(X)
+
+        #  show the statistics of the clusters
+        labels = model.predict(X)
+        df = get_numerical_statistics_clusters_df(data, clusters=labels, var_names=var_names, stat_names=stat_names)
+        print(df)
+        make_latex_table_MultiIndex(df)
+        print('')
+
+        # plot the clusters with pca and t-SNE
+        plot_clusters(X_tSNE, labels, title=titles[i], save_path=file_path_tSNE + titles[i], s=s)
+        plot_clusters(X_PCA, labels, title=titles[i], save_path=file_path_PCA + titles[i], s=s)
+
+        #  save labels:
+        pc4_labels = np.concatenate(
+            (data['pc4'].values.reshape(np.shape(data)[0], 1), labels.reshape(np.shape(data)[0], 1)), axis=1)
+        pd.DataFrame(pc4_labels, columns=['pc4', 'labels']).astype(int).to_csv('Results/pc4_best_labels_'+titles[i]+'.csv',
+                                                                               index=False)
+
+    ''' 
     # model two stage k means
     model = TwoStageClustering(X=X, n_clusters=opt_k[0])
     model.train(print_progress=False)
@@ -125,6 +155,9 @@ def main_results():
     make_latex_table_MultiIndex(df)
     print('')
 
+
+
+
     # model two stage GMM
     model = TwoStageClustering(X=X, n_clusters=opt_k[1], clus_method="gmm")
     model.train(print_progress=False)
@@ -135,6 +168,11 @@ def main_results():
     print(df)
     make_latex_table_MultiIndex(df)
     print('')
+
+    #  best labels:
+    pc4_labels = np.concatenate((data['pc4'].values.reshape(np.shape(data)[0],1), labels.reshape(np.shape(data)[0],1)), axis=1)
+    pd.DataFrame(pc4_labels, columns=['pc4', 'labels']).astype(int).to_csv('Results/pc4_best_labels.csv', index=False)
+
 
     # model k means
     print("Start training k-means model...")
@@ -162,54 +200,91 @@ def main_results():
     plot_clusters(X_PCA, labels, title=titles[3], save_path=file_path_PCA + titles[3], s=s)
     print(df)
     make_latex_table_MultiIndex(df)
+'''
+
+
+
 
 
 def main_results_best_model():
     # data
     version = 4  # version of data
+    best_method = "SOM + k-means"
     data = pd.read_csv("Data/zipcodedata_KNN_version_" + str(version) + ".csv")
-    data_normalised = pd.read_csv("Data/zipcodedata_KNN_normalized_version_" + str(version) + ".csv")
-    data_normalised, _, _ = normalise(data)
-    X = data_normalised.iloc[:,1:].values  # exclude pc4 variable
-    opt_k = 4   # the optimal k of the best model
+    labels = pd.read_csv('Results/pc4_best_labels_' + str(best_method)+ '.csv')['labels']
+
+
+    # variables per table
     demographic_names = ['INWONER', 'P_MAN', 'P_VROUW', 'P_INW_014', 'P_INW_1524', 'P_INW_2544',
        'P_INW_4564', 'P_INW_65PL', 'P_NL_ACHTG', 'P_WE_MIG_A', 'P_NW_MIG_A', 'GEM_HH_GR', 'UITKMINAOW',
        'P_LINK_HH', 'P_HINK_HH', 'log_median_inc']
-    demographic_general_names = ['INWONER', 'P_MAN', 'P_VROUW', 'GEM_HH_GR', 'P_NL_ACHTG', 'P_WE_MIG_A']
-    demographic_income_names = ['INWONER', 'log_median_inc',
+    demographic_general_names = ['INWONER', 'P_MAN', 'P_VROUW', 'GEM_HH_GR', 'P_NL_ACHTG', 'P_WE_MIG_A', 'P_NW_MIG_A']
+    demographic_income_names = [ 'log_median_inc',
        'P_LINK_HH', 'P_HINK_HH', 'UITKMINAOW']
+    demographic_age_names = [ 'P_INW_014', 'P_INW_1524', 'P_INW_2544',
+       'P_INW_4564', 'P_INW_65PL']
     neighborhood_names = ['AV1_FOOD', 'AV3_FOOD', 'AV5_FOOD', 'OAD']
 
+    tables = [demographic_names, demographic_general_names, demographic_income_names, demographic_age_names, neighborhood_names]
+    captions = ["Demographics of the clusters", "General demographics of the clusters", "Age demographics of the clusters",
+                "Income demographics of the clusters", "Neighborhood descriptives of the clusters"]
+
+    groups = ["General Demographics", "Age Demographics", "Income Demographics", "Neighborhood Descriptives"]
+    group_tables = [demographic_general_names, demographic_age_names, demographic_income_names, neighborhood_names]
+    # create dictionary with the variables:
+    dict_variables = {}
+    for group, table in zip(groups, group_tables):
+        dict_variables[group] = table
+
+    # parameters for tables
+    scale = 0.5
     stat_names = ["mean", "median", "std"]
 
-    # model two stage k means
-    model = TwoStageClustering(X=X, n_clusters=opt_k)
-    model.train(print_progress=False)
-    labels = model.predict(X)
+
+    for table, caption in zip(tables, captions):
+        df = get_numerical_statistics_clusters_df(data, clusters=labels, var_names=table,
+                                                              stat_names=stat_names)
+        print(df)
+        make_latex_table_MultiIndex(df, caption=caption, scale=scale)
+        print('')
+
+
+    df = get_numerical_statistics_clusters_df_inversed(data, clusters=labels, dict_var_names=dict_variables,
+                                                              stat_names=stat_names)
+    print(df)
+    make_latex_table_MultiIndex_inversed(df, dict_var_names=dict_variables, caption= "Statistics of the overall zipcodes and the clusters obtained by " + str(best_method), scale=scale)
+    print('')
+
+'''
 
     df_demographic = get_numerical_statistics_clusters_df(data, clusters=labels, var_names=demographic_names, stat_names=stat_names)
     print(df_demographic)
-    make_latex_table_MultiIndex(df_demographic, caption="Demographics of the clusters")
+    make_latex_table_MultiIndex(df_demographic, caption="Demographics of the clusters", scale=scale)
     print('')
 
     df_demographic_general = get_numerical_statistics_clusters_df(data, clusters=labels, var_names=demographic_general_names, stat_names=stat_names)
     print(df_demographic_general)
-    make_latex_table_MultiIndex(df_demographic_general, caption="General demographics of the clusters")
+    make_latex_table_MultiIndex(df_demographic_general, caption="General demographics of the clusters", scale=scale)
+    print('')
+
+    df_demographic_age = get_numerical_statistics_clusters_df(data, clusters=labels, var_names=demographic_age_names, stat_names=stat_names)
+    print(df_demographic_age)
+    make_latex_table_MultiIndex(df_demographic_age, caption="Age demographics of the clusters", scale=scale)
     print('')
 
     df_demographic_income = get_numerical_statistics_clusters_df(data, clusters=labels, var_names=demographic_income_names, stat_names=stat_names)
     print(df_demographic_income)
-    make_latex_table_MultiIndex(df_demographic_income, caption="Income demographics of the clusters")
+    make_latex_table_MultiIndex(df_demographic_income, caption="Income demographics of the clusters", scale=scale)
     print('')
 
     df_neighborhood = get_numerical_statistics_clusters_df(data, clusters=labels, var_names=neighborhood_names, stat_names=stat_names)
     print(df_neighborhood)
-    make_latex_table_MultiIndex(df_neighborhood, caption="Neighborhood descriptives of the clusters")
-
+    make_latex_table_MultiIndex(df_neighborhood, caption="Neighborhood descriptives of the clusters", scale=scale)
+'''
 
 
 if __name__ == '__main__':
-    #main_results()
+    main_results()
     main_results_best_model()
     #main_statistics()
 
