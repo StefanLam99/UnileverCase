@@ -5,7 +5,6 @@ data {
         int y[N];
         matrix[N, D] x; //predictor matrix
         
-        real generate; //Create generated quantities
         real boolean_test; //To test or not to test
         int N_test; //Number test observations
         matrix[N_test, D] x_test; //test matrix
@@ -31,7 +30,7 @@ transformed parameters {
 
 model {
         matrix[N, K] x_beta = x * beta';
-        sigma ~ gamma(2,2);
+        sigma ~ gamma(2,1.0/10);
         
         if(prior_set){
                 for(k in 1:K-1){
@@ -49,7 +48,7 @@ model {
 }
 
 generated quantities {
-        if(generate){
+
                 int y_pred_insample[N];
                 int y_pred_outsample[N_test];
                 
@@ -66,6 +65,6 @@ generated quantities {
                 for (n in 1:N){
                         y_pred_insample[n] = categorical_logit_rng(x_beta_train[n]');
                 }
-        }
+
         
 }

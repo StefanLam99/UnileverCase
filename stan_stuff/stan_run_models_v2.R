@@ -32,25 +32,6 @@ WX_interest <- c(X_interest, "INWONER","P_MAN","P_VROUW","P_INW_1524", "P_INW_25
 table(y_df_train$DV) #1 = OPERATIONAl, 2= PERMANENTLY CLOSED, 3 = TEMPORARILY CLOSED
 y_df_train$DV <- factor(y_df_train$DV)
 
-
-small_subset <- c(3000:6000)
-subset_prior_mean <- c(1:2999)
-sample_length = round(3000/3)
-
-#Equal sample
-set.seed(5)
-ind_operational <- which(y_df_train$DV==1, arr.ind=TRUE)
-ind_temp <- which(y_df_train$DV==3, arr.ind=TRUE)
-ind_perm <- which(y_df_train$DV==2, arr.ind=TRUE)
-small_subset_training <- c(sample(ind_perm, sample_length), 
-                          ind_temp,
-                          sample(ind_operational, sample_length))
-small_subset_undersampling <- c(sample(ind_perm, length(ind_temp)), 
-                                ind_temp,
-                                sample(ind_operational, length(ind_temp)))
-# small_subset_oversampling #TODO
-full_dataset <- c(ind_operational, ind_temp, ind_perm)
-
 #FUNCTION TO CREATE DATALIST
 create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE){
   y <-  factor(y_df_train$DV)
@@ -70,7 +51,7 @@ create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE){
     WX_test <- WX_df_test[, X_interest]
   }
   
-
+  
   cluster <- WX_df_train$labels[subset]
   cluster_test <- WX_df_test$labels
   
@@ -94,25 +75,20 @@ create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE){
                   y_prior = y[subset_prior_mean],
                   WX_prior = WX_prior,
                   prior_set = 0
-                  )
-
-    if(length(subset_prior_mean)>0){
-      mean <- coef(multinom(datlist$y_prior~., data = datlist$WX_prior))
-      datlist$prior_mean <- (mean)
-
-    }else{
-      datlist$prior_mean <- matrix(rep( 0, len=(datlist$K-1)*datlist$D, nrow = (datlist$K-1)))
-
-                                   
-    }
-
+  )
+  
+  if(length(subset_prior_mean)>0){
+    mean <- coef(multinom(datlist$y_prior~., data = datlist$WX_prior))
+    datlist$prior_mean <- (mean)
+    
+  }else{
+    datlist$prior_mean <- matrix(rep( 0, len=(datlist$K-1)*datlist$D), nrow = (datlist$K-1))
+    
+    
+  }
+  
   datlist
 }
-
-datlist_zip <- create_datlist(small_subset, with_zip = TRUE)
-datlist_restaurant_only <- create_datlist(small_subset,subset_prior_mean, with_zip = FALSE)
-
-####ESTIMATE####
 #FUNCTION TO ESTIMATE MODELS
 #MODEL TYPE: 1 = multilog pooled, 2 = multilog unpooled, 3 = multilog with mu
 estimate_model <- function(datlist, model_type, gqs = TRUE, test = TRUE, prior_set =TRUE, save = FALSE, iter = 1000, chains = 4){
@@ -130,22 +106,22 @@ estimate_model <- function(datlist, model_type, gqs = TRUE, test = TRUE, prior_s
   #1 = multilog pooled, 2 = multilog unpooled, 3 = multilog with mu
   if(model_type == 1){
     b.out <- stan(file='./stan_stuff/multilog.stan',
-                 data=datlist,
-                 iter = iter,
-                 chains = chains,
-                 seed = 12591)
+                  data=datlist,
+                  iter = iter,
+                  chains = chains,
+                  seed = 12591)
     if(save){
       saveRDS(b.out, "./stan_stuff/stan_model_output/multilog.rds")
     }
   }else if (model_type==2){
-      b.out <- stan(file='./stan_stuff/unpooledmultilog.stan',
-                    data=datlist,
-                    iter = iter,
-                    chains = chains,
-                    seed = 12591)
-      if(save){
-        saveRDS(b.out, "./stan_stuff/stan_model_output/unpooledmultilog.rds")
-      }
+    b.out <- stan(file='./stan_stuff/unpooledmultilog.stan',
+                  data=datlist,
+                  iter = iter,
+                  chains = chains,
+                  seed = 12591)
+    if(save){
+      saveRDS(b.out, "./stan_stuff/stan_model_output/unpooledmultilog.rds")
+    }
   }else{
     b.out <- stan(file='./stan_stuff/multilog_based_on_mcstan.stan',
                   data=datlist,
@@ -159,17 +135,8 @@ estimate_model <- function(datlist, model_type, gqs = TRUE, test = TRUE, prior_s
   b.out
 }
 
-# estimate Stan model
-b_unpooled_test_prior <- estimate_model(datlist_restaurant_only, model_type = 2, gqs=FALSE, test = TRUE, prior_set = TRUE, iter = 500, chains=4)
-b_unpooled_test <- estimate_model(datlist_restaurant_only, model_type = 2, gqs=FALSE, test = TRUE, prior_set = FALSE, iter = 500, chains=4)
-
-b_pooled_test_0 <- estimate_model(datlist_zip, model_type = 1, gqs=TRUE, test = FALSE, prior_set = FALSE, iter = 100, chains=4)
-b_unpooled_mu_prior <- estimate_model(datlist_restaurant_only, model_type = 3, test = TRUE, prior_set=TRUE, iter = 100, chains=4)
-b_unpooled_mu <- estimate_model(datlist_restaurant_only, model_type = 3, test = TRUE, prior_set=FALSE, iter = 100, chains=4)
-
-
 ####PREDICTION EVALUATION####
-#Function for contingency table
+#FUNCTION FOR CONTINGENCY MODEL
 #Average type: 1 = median, 2 = mean, 3 = mode
 contingency_table <- function(b.out, datlist, average_type = 1, insample=TRUE){
   fit <- b.out
@@ -196,25 +163,14 @@ contingency_table <- function(b.out, datlist, average_type = 1, insample=TRUE){
     }
     prediction<- apply(prediction, 2, getmode)
   }
-  
-  #Obtain contingency table
-  print(paste0("Accuracy: ", mean(prediction == true_value)))
-  cont_table <- table(prediction, true_value)
-  cont_table <- (rbind(cont_table, apply(cont_table, 2, sum)))
-  cont_table <- cbind(cont_table, apply(cont_table,1, sum))
-  print(cont_table)
-  
+
   prediction <- as.factor(prediction)
-  # levels(prediction) <- c(1,2,3)
   true_value <- as.factor(true_value)
-  print(levels(prediction))
-  print(levels(true_value))
-  print(confusionMatrix(prediction, reference=true_value))
+  
+  (confusionMatrix(prediction, reference=true_value))
 }
 
-contingency_table(b_pooled_test, datlist = datlist_zip, average_type = 3, insample=FALSE)
-contingency_table(b_unchanged.out, datlist.unchanged)
-
+#FUNCTION FOR Parameter MODEL
 #Obtain Parameter tables
 parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
   fit.ext <- rstan::extract(b.out)
@@ -237,7 +193,7 @@ parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
                                  LI=c(ind_coeff[1,,1:length(var_names)]),
                                  Median=c(ind_coeff[2,,1:length(var_names)]),
                                  HI=c(ind_coeff[3,,1:length(var_names)])
-                                 )
+      )
       
       out<-paste(outcome)
       df_ind_coeff$Outcome<-factor(out,levels=out)
@@ -280,18 +236,57 @@ parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
   df_ind
 }
 
-parameter_table(b_pooled_test, "beta", clusters=FALSE, var_names = c("INTERCEPT", X_interest))
-parameter_table(b_unpooled_mu_prior, "beta", clusters=TRUE, var_names = c("INTERCEPT", X_interest))
-parameter_table(b_unpooled_mu_prior, "mu", clusters=FALSE, var_names = c("INTERCEPT", X_interest))
-#FOR BETA UNPOOLED MULTILOG
-ind_coeff <- apply(fit.ext$beta,c(2,3,4), quantile, probs=c(0.025, 0.5, 0.975))
+obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only = TRUE, model_num = 1, iter = 2000, chains = 4){
+  output <- list()
+  
+  #Equal sample
+  set.seed(5)
+  sample_length = round(n_observations/3)
+  ind_operational <- which(y_df_train$DV==1, arr.ind=TRUE)
+  ind_temp <- which(y_df_train$DV==3, arr.ind=TRUE)
+  ind_perm <- which(y_df_train$DV==2, arr.ind=TRUE)
+  
+  #Indices for other kind of datsets
+  small_subset <- c(n_prior+1:n_prior+n_observations)
+  subset_prior_mean <- c(1:n_prior)
+  small_subset_training <- c(sample(ind_perm, sample_length), 
+                             ind_temp,
+                             sample(ind_operational, sample_length))
+  small_subset_undersampling <- c(sample(ind_perm, length(ind_temp)), 
+                                  ind_temp,
+                                  sample(ind_operational, length(ind_temp)))
+  # small_subset_oversampling #TODO
+  full_dataset <- c(ind_operational, ind_temp, ind_perm)
+  
+  if(restaurant_only){
+    output$varnames <- c("INTERCEPT", X_interest)
+    output$datlist <- create_datlist(small_subset, with_zip = TRUE)
+    output$model <- estimate_model(output$datlist, model_type = model_num, prior_set=FALSE, iter=iter, chains=chains)
+  }else{
+    output$varnames <- c("INTERCEPT", WX_interest)
+    output$datlist <- create_datlist(small_subset, with_zip = FALSE)
+    output$model <- estimate_model(output$datlist, model_type = model_num, prior_set=FALSE, iter=iter, chains=chains)
+  }
+  
+  output$cont_insample <- contingency_table(output$model, datlist = output$datlist, average_type = 3, insample=TRUE)
+  output$cont_outsample <-contingency_table(output$model, datlist = output$datlist, average_type = 3, insample=FALSE)
+  
+  if(model_num==1){
+    output$beta <- parameter_table(output$model, "beta", clusters=FALSE, var_names = output$varnames)
+  }else if(model_num==2){
+    output$beta <- parameter_table(output$model, "beta", clusters=TRUE, var_names = output$varnames)
+  }else{
+    output$beta <- parameter_table(output$model, "beta", clusters=TRUE, var_names = output$varnames)
+    output$mu <- parameter_table(output$model, "mu", clusters=TRUE, var_names = output$varnames)
+  }
+  output
+}
+
+output_1 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 1, iter = 2000, chains = 4)
+output_2 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 2, iter = 2000, chains = 4)
+output_3 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 3, iter = 2000, chains = 4)
 
 
-
-
-ind_coeff<-apply(fit.ext$beta,c(2,3), quantile, probs=c(0.025,0.5,0.975))
-var_names <- c("INTERCEPT", X_interest)
-var_df_pooled(ind_coeff)
 
 
 

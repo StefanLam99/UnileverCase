@@ -17,29 +17,29 @@ data {
         matrix[K-1, D] prior_mean;
 }
 
+transformed data {
+  row_vector[D] zeros = rep_row_vector(0, D); //Create zero for identification, will later be appended to beta_raw
+}
+
 
 parameters {
-        matrix[K,D] beta_raw[n_cluster]; //Beta coefficients for k groups (without the zeros)
+        matrix[K-1,D] beta_raw[n_cluster]; //Beta coefficients for k groups (without the zeros)
         real<lower=0> sigma[n_cluster];
 }
 
 transformed parameters {
         matrix[K, D] beta[n_cluster];
-        
-        for(c in 1:n_cluster){
-                beta[c,,] = beta_raw[c,,];
-        }
-        
+
         for (c in 1:n_cluster){
-                for (d in 1:D)
-                beta[c, 1, d] = 0;
-        }
+                    beta[c,,] = append_row(zeros,beta_raw[c,,]); 
+                  }
+        
 }
 
 
 model {
         matrix[N, K] x_beta;
-        to_vector(sigma)~gamma(2,2);
+        to_vector(sigma)~gamma(2,1.0/10);
         
         
         for(c in 1:n_cluster){

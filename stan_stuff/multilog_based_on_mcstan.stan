@@ -47,8 +47,8 @@ model {
   // 
   // sigma_beta ~ cauchy(0,10);
   // Lcorr_beta ~ lkj_corr_cholesky(50);
-  sigma~gamma(5,5);
-  sigma_beta ~gamma(5,5);
+  sigma~gamma(2,1.0/10);
+  sigma_beta ~gamma(2,1.0/10);
   
   
   
