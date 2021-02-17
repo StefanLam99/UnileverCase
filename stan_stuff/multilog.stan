@@ -5,10 +5,13 @@ data {
         int y[N];
         matrix[N, D] x; //predictor matrix
         
+        real generate; //Create generated quantities
         real boolean_test; //To test or not to test
         int N_test; //Number test observations
         matrix[N_test, D] x_test; //test matrix
-
+        
+        real prior_set; //Whether or not prior_set is included
+        matrix[K-1, D] prior_mean;
 }
 
 
@@ -29,30 +32,40 @@ transformed parameters {
 model {
         matrix[N, K] x_beta = x * beta';
         sigma ~ gamma(2,2);
-        to_vector(beta_raw) ~ normal(0, sigma); //Random prior, with more information we can specify this clearer.
+        
+        if(prior_set){
+                for(k in 1:K-1){
+                        for(d in 1:D){
+                                beta_raw[k, d] ~ normal(prior_mean[k,d], sigma); //Random prior, with more information we can specify this clearer.
+                        }
+                }    
+        }else{
+                to_vector(beta_raw)~normal(0, sigma);
+        }
+        
+        
         for (n in 1:N)
-                y[n] ~ categorical_logit(x_beta[n]');
+        y[n] ~ categorical_logit(x_beta[n]');
 }
 
 generated quantities {
-        int y_pred_insample[N];
-        int y_pred_outsample[N_test];
-        
-        matrix[N, K] x_beta_train = x * beta';
-        
-        if(boolean_test){
-            matrix[N_test, K] x_beta_test = x_test * beta';
-            for (n in 1:N_test){
-                y_pred_outsample[n] = categorical_logit_rng(x_beta_test[n]');
-            }
+        if(generate){
+                int y_pred_insample[N];
+                int y_pred_outsample[N_test];
+                
+                matrix[N, K] x_beta_train = x * beta';
+                
+                if(boolean_test){
+                        matrix[N_test, K] x_beta_test = x_test * beta';
+                        for (n in 1:N_test){
+                                y_pred_outsample[n] = categorical_logit_rng(x_beta_test[n]');
+                        }
+                }
+                
+                
+                for (n in 1:N){
+                        y_pred_insample[n] = categorical_logit_rng(x_beta_train[n]');
+                }
         }
-       
         
-        for (n in 1:N){
-          y_pred_insample[n] = categorical_logit_rng(x_beta_train[n]');
-        }
-        
-        
-       
-
 }

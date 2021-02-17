@@ -12,7 +12,9 @@ data {
         int N_test; //Number test observations
         matrix[N_test, D] x_test; //test matrix
         int<lower=1, upper=n_cluster_test> cluster_test[N_test]; //Vector with cluster indices
-
+        
+        real prior_set; //Whether or not prior_set is included
+        matrix[K-1, D] prior_mean;
 }
 
 
@@ -23,14 +25,14 @@ parameters {
 
 transformed parameters {
         matrix[K, D] beta[n_cluster];
-
+        
         for(c in 1:n_cluster){
                 beta[c,,] = beta_raw[c,,];
         }
         
         for (c in 1:n_cluster){
                 for (d in 1:D)
-                        beta[c, 1, d] = 0;
+                beta[c, 1, d] = 0;
         }
 }
 
@@ -38,15 +40,28 @@ transformed parameters {
 model {
         matrix[N, K] x_beta;
         to_vector(sigma)~gamma(2,2);
-
-        for(c in 1:n_cluster)
-                to_vector(beta_raw[c,,]) ~ normal(0, sigma[c]); //Random prior, with more information we can specify this clearer.
-
-        for (n in 1:N){
-                x_beta[n] = x[n,] * (beta[cluster[n],,])';
-                y[n] ~ categorical_logit(x_beta[n]');
-        }
+        
+        
+        for(c in 1:n_cluster){
+                if(prior_set){
+                        for(k in 1:K-1){
+                                for(d in 1:D){
+                                        beta_raw[c,k, d] ~ normal(prior_mean[k,d], sigma[c]); //Random prior, with more information we can specify this clearer.
+                                }
+                        }    
+                }else{
+                        to_vector(beta_raw[c,,]) ~ normal(0, sigma[c]); //Random prior, with more information we can specify this clearer.
+                }
                 
+                
+                
+                
+                for (n in 1:N){
+                        x_beta[n] = x[n,] * (beta[cluster[n],,])';
+                        y[n] ~ categorical_logit(x_beta[n]');
+                }
+        }
+        
 }
 
 generated quantities {
@@ -59,10 +74,10 @@ generated quantities {
         matrix[N_test, K] x_beta_test;
         
         if(boolean_test){
-            for (n in 1:N_test){
-                x_beta_test[n] = x_test[n,] *(beta[cluster_test[n],,])';
-                y_pred_outsample[n] = categorical_logit_rng(x_beta_test[n]');
-            }
+                for (n in 1:N_test){
+                        x_beta_test[n] = x_test[n,] *(beta[cluster_test[n],,])';
+                        y_pred_outsample[n] = categorical_logit_rng(x_beta_test[n]');
+                }
         }
         
         for (n in 1:N){
@@ -71,6 +86,6 @@ generated quantities {
                 // y_pred_soft[n] = softmax(x_beta_train[n]');
                 // log_lik[n] = categorical_lpmf(y[n]|softmax(x_beta_train[n]'));
         }
-
+        
 }
 
