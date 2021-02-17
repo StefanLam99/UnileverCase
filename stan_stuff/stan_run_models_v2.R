@@ -32,7 +32,7 @@ WX_interest <- c(X_interest, "INWONER","P_MAN","P_VROUW","P_INW_1524", "P_INW_25
 table(y_df_train$DV) #1 = OPERATIONAl, 2= PERMANENTLY CLOSED, 3 = TEMPORARILY CLOSED
 y_df_train$DV <- factor(y_df_train$DV)
 
-small_subset <- c(1:1000)
+small_subset <- c(1:3000)
 sample_length = round(3000/3)
 
 #Equal sample
@@ -78,26 +78,26 @@ create_datlist <-  function(subset, with_zip = TRUE){
                   x=cbind(1,WX),                 #Predictor Matrix
                   y=as.numeric(y),  #Dependent Variable)
                   n_cluster = length(unique(cluster)), #Length of cluster
-                  cluster = cluster, #Cluster
+                  cluster = cluster+1, #Cluster
                   
                   boolean_test = 0, #Whether to test or not
                   
                   y_test = y_test, #dependent test variable (probably not needed for stan but easy for prediction)
-                  X_test = WX_test, #Test set
+                  x_test = cbind(1,WX_test), #Test set
                   N_test = nrow(WX_test), #observations in testset
-                  cluster_test = cluster_test, #clusters in test set
-                  n_cluster_test = length(unique(cluster)) #No.  cluster in testset.
+                  cluster_test = cluster_test+1, #clusters in test set
+                  n_cluster_test = length(unique(cluster_test)) #No.  cluster in testset.
                   )
   datlist
 }
 
-datlist_zip <- create_datlist(small_subset_training, with_zip = TRUE)
-datlist_restaurant_only <- create_datlist(small_subset_training, with_zip = FALSE)
+datlist_zip <- create_datlist(small_subset, with_zip = TRUE)
+datlist_restaurant_only <- create_datlist(small_subset, with_zip = FALSE)
 
 ####ESTIMATE####
 #FUNCTION TO ESTIMATE MODELS
 #MODEL TYPE: 1 = multilog pooled, 2 = multilog unpooled, 3 = multilog with mu
-function(datlist, model_type, test = TRUE, save = FALSE, iter = 1000, chains = 4){
+estimate_model <- function(datlist, model_type, test = TRUE, save = FALSE, iter = 1000, chains = 4){
   if(test){
     datlist$boolean_test <- 1
   }
@@ -132,55 +132,142 @@ function(datlist, model_type, test = TRUE, save = FALSE, iter = 1000, chains = 4
       saveRDS(b.out, "./stan_stuff/stan_model_output/unpooledhierarchical.rds")
     }
   }
+  b.out
 }
 
 # estimate Stan model
-b_changed.out <- stan(file='./stan_stuff/multilog_insample.stan',
-                      data=datlist.changed,
-                      iter = 1000,
-                      chains = 4,
-                      seed = 12591)
-saveRDS(b_changed.out, "./stan_stuff/stan_model_output/b_changed.rds")
-b_unchanged.out <- stan(file='./stan_stuff/multilog_insample.stan',
-                        data=datlist.unchanged,
-                        iter = 1000,
-                        chains = 4,
-                        seed = 12591)
-saveRDS(b_unchanged.out, "./stan_stuff/stan_model_output/b_normal.rds")
+b_unpooled_test <- estimate_model(datlist_zip, model_type = 2, test = TRUE, iter = 2000, chains=4)
+b_pooled_test <- estimate_model(datlist_restaurant_only, model_type = 1, test = FALSE, iter = 100, chains=1)
+b_unpooled_mu <- estimate_model(datlist_restaurant_only, model_type = 3, test = FALSE, iter = 2000, chains=4)
 
 ####PREDICTION EVALUATION####
-contingency_table <- function(b.out, datlist){
+#Function for contingency table
+#Average type: 1 = median, 2 = mean, 3 = mode
+contingency_table <- function(b.out, datlist, average_type = 1, insample=TRUE){
   fit <- b.out
   fit.ext <- rstan::extract(fit)
   
-  
-  getmode <- function(v) {
-    uniqv <- unique(v)
-    uniqv[which.max(tabulate(match(v, uniqv)))]
+  #In OutSample Prediction
+  if(insample){
+    prediction <-fit.ext$y_pred_insample
+    true_value <-datlist$y
+  }else{
+    prediction <-fit.ext$y_pred_outsample
+    true_value <- datlist$y_test
   }
   
-  prediction_median <- apply(fit.ext$y_pred_insample, 2, median)
-  prediction_mean <- round(apply(fit.ext$y_pred_insample, 2, mean))
-  prediction_mode <- apply(fit.ext$y_pred_insample, 2, getmode)
+  #Type of meaning prediction
+  if(average_type==1){
+    prediction <- apply(prediction, 2, median)
+  }else if(average_type==2){
+    prediction <- round(apply(prediction, 2, mean))
+  }else{
+    getmode <- function(v) {
+      uniqv <- unique(v)
+      uniqv[which.max(tabulate(match(v, uniqv)))]
+    }
+    prediction<- apply(prediction, 2, getmode)
+  }
   
-  print(mean(prediction_mode == datlist$y))
-  cont_table <- table(prediction_mode, datlist$y)
+  #Obtain contingency table
+  print(paste0("Accuracy: ", mean(prediction == true_value)))
+  cont_table <- table(prediction, true_value)
   cont_table <- (rbind(cont_table, apply(cont_table, 2, sum)))
   cont_table <- cbind(cont_table, apply(cont_table,1, sum))
   print(cont_table)
   
-  prediction <- as.factor(prediction_mode)
+  prediction <- as.factor(prediction)
   # levels(prediction) <- c(1,2,3)
-  datlist$y <- as.factor(datlist$y)
+  true_value <- as.factor(true_value)
   print(levels(prediction))
-  print(levels(datlist$y))
-  print(confusionMatrix(prediction, reference=datlist$y))
+  print(levels(true_value))
+  print(confusionMatrix(prediction, reference=true_value))
 }
 
-print("CHANGED")
-contingency_table(b_changed.out, datlist.changed)
-print("UNCHANGED")
+contingency_table(b_pooled_test, datlist = datlist_zip, average_type = 3, insample=FALSE)
 contingency_table(b_unchanged.out, datlist.unchanged)
+
+#Obtain Parameter tables
+parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
+  fit.ext <- rstan::extract(b.out)
+  if(par_interest =="beta"){
+    mcmc_int <- fit.ext$beta
+  }else if(par_interest=="mu"){
+    mcmc_int <- fit.ext$mu
+  }else{
+    stop("implement this one")
+  }
+  if(clusters){
+    print(dim(mcmc_int))
+    ind_coeff <- apply(mcmc_int,c(2,3,4), quantile, probs=c(0.025, 0.5, 0.975))
+    
+    ind_coeff_2 <- ind_coeff[,,2,]
+    ind_coeff_3 <- ind_coeff[,,3,]
+    
+    df_ind_unpooled <-function(ind_coeff, outcome){
+      df_ind_coeff <- data.frame(Coeff=rep(var_names,each=2), 
+                                 LI=c(ind_coeff[1,,1:length(var_names)]),
+                                 Median=c(ind_coeff[2,,1:length(var_names)]),
+                                 HI=c(ind_coeff[3,,1:length(var_names)])
+                                 )
+      
+      out<-paste(outcome)
+      df_ind_coeff$Outcome<-factor(out,levels=out)
+      
+      gr<-paste("Gr",1:2)
+      
+      df_ind_coeff$Group<-factor(gr,levels=gr)
+      df_ind_coeff
+    }
+    
+    df_beta_2 <- df_ind_unpooled(ind_coeff_2, 2)
+    df_beta_3 <- df_ind_unpooled(ind_coeff_3, 3)
+    df_ind <- rbind(df_beta_2, df_beta_3) 
+  }else if (par_interest == "mu"){
+    df_ind_mu <-function(ind_coeff){
+      df_ind_coeff <- data.frame(Coeff=rep(var_names,each=1),LI=c(ind_coeff[1,,1:length(var_names)]),Median=c(ind_coeff[2,,1:length(var_names)]),HI=c(ind_coeff[3,,1:length(var_names)]))
+      
+      out <- paste(rep(c(2:3), each=length(var_names)))
+      df_ind_coeff$Outcome <- factor(out, levels=unique(out))
+      
+      df_ind_coeff
+    }
+    df_ind <- df_ind_mu(ind_coeff)
+  }
+  else{
+    ind_coeff<-apply(mcmc_int,c(2,3), quantile, probs=c(0.025,0.5,0.975))
+    
+    df_ind_pooled <-function(ind_coeff){
+      df_ind_coeff <- data.frame(Coeff=rep(var_names,each=1),LI=c(ind_coeff[1,2:3,1:length(var_names)]),Median=c(ind_coeff[2,2:3,1:length(var_names)]),HI=c(ind_coeff[3,2:3,1:length(var_names)]))
+      
+      out <- paste(rep(c(2:3), each=length(var_names)))
+      df_ind_coeff$Outcome <- factor(out, levels=unique(out))
+      
+      df_ind_coeff
+    }
+    
+    df_ind <- df_ind_pooled(ind_coeff)
+  }
+  df_ind
+}
+
+parameter_table(b_pooled_test, "beta", clusters=FALSE, var_names = c("INTERCEPT", X_interest))
+parameter_table(b_unpooled_mu, "beta", clusters=TRUE, var_names = c("INTERCEPT", WX_interest))
+parameter_table(b_unpooled_mu, "mu", clusters=FALSE, var_names = c("INTERCEPT", WX_interest))
+#FOR BETA UNPOOLED MULTILOG
+ind_coeff <- apply(fit.ext$beta,c(2,3,4), quantile, probs=c(0.025, 0.5, 0.975))
+
+
+
+
+ind_coeff<-apply(fit.ext$beta,c(2,3), quantile, probs=c(0.025,0.5,0.975))
+var_names <- c("INTERCEPT", X_interest)
+var_df_pooled(ind_coeff)
+
+
+
+
+
 
 
 

@@ -75,7 +75,7 @@ generated quantities {
         
         if(boolean_test){
             for (n in 1:N_test){
-                x_beta_test[n] = x[n,] *(beta[cluster_test[n],,])';
+                x_beta_test[n] = x_test[n,] *(beta[cluster_test[n],,])';
                 y_pred_outsample[n] = categorical_logit_rng(x_beta_test[n]');
             }
         }
