@@ -70,7 +70,7 @@ def get_numerical_statistics(X):
     orig_n_obs = len(X)  # number of observations including missing values
     X = np.array(X)
     X = X[np.logical_not(np.isnan(X))]
-    return {'mean': np.mean(X), 'std': np.std(X), 'median': np.median(X), 'max': np.max(X), 'min': np.min(X), 'observations': orig_n_obs, 'Jarque-Bera Test': stats.jarque_bera(X)[0]}
+    return {'mean': np.mean(X), 'std': np.std(X), 'median': np.median(X), 'max': np.max(X), 'min': np.min(X), 'observations': orig_n_obs, 'Jarque-Bera Test Statistic': stats.jarque_bera(X)[0], 'JB P-value': stats.jarque_bera(X)[1]}
 
 
 
