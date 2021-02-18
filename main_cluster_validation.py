@@ -16,7 +16,6 @@ def main_validation(version):
     X = data_normalised.iloc[:,1:].values  # exclude pc4 variable
 
     # parameters
-    titles = ["SOM + k-means", "SOM + GMM", "k-means", "GMM"]
     k_range = np.r_[2:11]
 
     # models
@@ -26,7 +25,6 @@ def main_validation(version):
     model_SOM.train(print_progress=True)
     W = model_SOM.map  # use this to train the kmeans and GMM for the TSC
     for i, k in enumerate(k_range):
-        print(k)
         models = [TwoStageClustering(X=X, W=W, n_clusters=k),
                   TwoStageClustering(X=X, W=W, n_clusters=k, clus_method="gmm"),
                   KMeans(n_clusters=k, random_state=0, algorithm="full", max_iter=5000, n_init=10),
@@ -41,7 +39,6 @@ def main_validation(version):
                 model.fit(X)
 
             labels = model.predict(X)
-            print(set(labels))
             DB_measures[i,j] = davies_bouldin_score(X, labels)
             silhouette_measures[i, j] = silhouette_score(X, labels)
 
@@ -52,7 +49,7 @@ def main_validation(version):
     plt.plot(k_range, DB_measures[:, 3], 'mx-', label="GMM")
     plt.xlabel('Number of clusters')
     plt.ylabel('DB score')
-    plt.title('Davies-Bouldin score for the clustering methods ')
+    plt.title('Davies-Bouldin score for the clustering methods version ' + str(version))
     plt.legend()
     plt.show()
 
@@ -62,14 +59,14 @@ def main_validation(version):
     plt.plot(k_range, silhouette_measures[:, 2], 'gx-', label="Kmeans")
     plt.plot(k_range, silhouette_measures[:, 3], 'mx-', label="GMM")
     plt.xlabel('Number of clusters')
-    plt.ylabel('DB score')
-    plt.title('Silhouette score for the clustering methods ')
+    plt.ylabel('Silhouette score')
+    plt.title('Silhouette score for the clustering methods version ' + str(version))
     plt.legend()
     plt.show()
 
 
 
 if __name__ == '__main__':
-    version = 7
+    version = 6
     main_validation(version)
 
