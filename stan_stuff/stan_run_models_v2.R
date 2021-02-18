@@ -282,7 +282,7 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
   output
 }
 
-output_1 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 1, iter = 2000, chains = 4)
+# output_1 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 1, iter = 2000, chains = 4)
 output_2 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 2, iter = 2000, chains = 4)
 output_3 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 3, iter = 2000, chains = 4)
 

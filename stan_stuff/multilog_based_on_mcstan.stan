@@ -82,20 +82,15 @@ generated quantities {
   int y_pred_outsample[N_test];
   // vector[K] y_pred_soft[N];
   // real log_lik[N];
-  
-  matrix[N, K] x_beta_train; 
-  matrix[N_test, K] x_beta_test;
-  
+
   if(boolean_test){
     for (n in 1:N_test){
-      x_beta_test[n] = x_test[n,] *(beta[cluster_test[n],,])';
-      y_pred_outsample[n] = categorical_logit_rng(x_beta_test[n]');
+      y_pred_outsample[n] = categorical_logit_rng((x_test[n,] *(beta[cluster_test[n],,])')');
     }
   }
   
   for (n in 1:N){
-    x_beta_train[n] = x[n,] * (beta[cluster[n],,])';
-    y_pred_insample[n] = categorical_logit_rng(x_beta_train[n]');
+    y_pred_insample[n] = categorical_logit_rng((x[n,] * (beta[cluster[n],,])')');
     // y_pred_soft[n] = softmax(x_beta_train[n]');
     // log_lik[n] = categorical_lpmf(y[n]|softmax(x_beta_train[n]'));
   }
