@@ -15,7 +15,7 @@ class SOM:
     Class to make a SOM network model
     """
 
-    def __init__(self, X, map_shape = (8,8), init_lr=0.1, init_response=1, max_iter=20000, normalize_data=False, seed=0):
+    def __init__(self, X, map_shape = (8,8), init_lr=0.1, init_response=1, max_iter=10000, normalize_data=False, seed=0):
         np.random.seed(seed)  # set the seed for this SOM network
 
         # input data and output map
