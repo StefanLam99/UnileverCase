@@ -33,7 +33,7 @@ table(y_df_train$DV) #1 = OPERATIONAl, 2= PERMANENTLY CLOSED, 3 = TEMPORARILY CL
 y_df_train$DV <- factor(y_df_train$DV)
 
 #FUNCTION TO CREATE DATALIST
-create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE){
+create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE, oversample = FALSE){
   y <-  factor(y_df_train$DV)
   y <- y[subset]
   
@@ -54,6 +54,14 @@ create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE){
   
   cluster <- WX_df_train$labels[subset]
   cluster_test <- WX_df_test$labels
+  
+  if(oversample){
+    oversampled<- upSample(x = cbind(cluster, WX), 
+                          y = y)
+    cluster <- oversampled$cluster
+    y <- oversampled$Class
+    WX <- oversampled[,!(names(oversampled) %in% c('Class', 'cluster'))]
+  }
   
   datlist <- list(N=nrow(WX),           #Nr of obs
                   K=length(unique(y)),  #Possible outcomes
@@ -83,8 +91,6 @@ create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE){
     
   }else{
     datlist$prior_mean <- matrix(rep( 0, len=(datlist$K-1)*datlist$D), nrow = (datlist$K-1))
-    
-    
   }
   
   datlist
@@ -236,7 +242,8 @@ parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
   df_ind
 }
 
-obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only = TRUE, model_num = 1, iter = 2000, chains = 4){
+obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only = TRUE, oversample = FALSE,
+                          model_num = 1, iter = 2000, chains = 4){
   output <- list()
   
   #Equal sample
@@ -249,7 +256,7 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
   #Indices for other kind of datsets
   small_subset <- c(n_prior+1:n_prior+n_observations)
   subset_prior_mean <- c(1:n_prior)
-  small_subset_training <- c(sample(ind_perm, sample_length), 
+  small_subset_over <- c(sample(ind_perm, sample_length), 
                              ind_temp,
                              sample(ind_operational, sample_length))
   small_subset_undersampling <- c(sample(ind_perm, length(ind_temp)), 
@@ -258,13 +265,21 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
   # small_subset_oversampling #TODO
   full_dataset <- c(ind_operational, ind_temp, ind_perm)
   
+  if(oversample){
+    subset <- small_subset_over
+  }else if(n_observations == nrow(WX_df_train)){
+    subset <- full_dataset
+  }else{
+    subset <- small_subset
+  }
+  
   if(restaurant_only){
     output$varnames <- c("INTERCEPT", X_interest)
-    output$datlist <- create_datlist(small_subset, with_zip = TRUE)
+    output$datlist <- create_datlist(subset, with_zip = FALSE, oversample)
     output$model <- estimate_model(output$datlist, model_type = model_num, prior_set=FALSE, iter=iter, chains=chains)
   }else{
     output$varnames <- c("INTERCEPT", WX_interest)
-    output$datlist <- create_datlist(small_subset, with_zip = FALSE)
+    output$datlist <- create_datlist(subset, with_zip = TRUE, oversample)
     output$model <- estimate_model(output$datlist, model_type = model_num, prior_set=FALSE, iter=iter, chains=chains)
   }
   
@@ -282,13 +297,33 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
   output
 }
 
-# output_1 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 1, iter = 2000, chains = 4)
-output_2 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 2, iter = 2000, chains = 4)
-output_3 <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, model_num = 3, iter = 2000, chains = 4)
+rest_over_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
+rest_over_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
+rest_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
+
+all_over_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
+all_over_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
+all_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
+
+rest_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
+rest_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
+rest_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
+
+all_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
+all_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
+all_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
 
 
+#Additional possibly interesting diagnostics...
+temp <- rstan::extract(output_2$model)
+#If we Include a model about the data distribution corresponding to the plot below we have a nice argument to the 
+#Bootstrapping...
 
+#Interesting plot of the distribution
+ppc_stat_grouped(output_2$datlist$y, temp$y_pred_insample, group = output_2$datlist$y )
 
+#For some diagnostic plots
+launch_shinystan(output_2$model)
 
 
 
