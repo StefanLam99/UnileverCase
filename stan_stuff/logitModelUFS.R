@@ -38,20 +38,70 @@ cluster <- WX_df$cluster[small_subset]
 cluster_for_zip <- W_df$cluster
 zip_level <- X_df$level_zip[small_subset]
 
-datlist <- list(N=nrow(X),           #Nr of obs
-                K=length(unique(y)),  #Possible outcomes
-                D=ncol(X)+1,            #NR of predictors
-                x=cbind(1,X),                 #Predictor Matrix
-                y=as.numeric(y))      #Dependent Variable
-datlist.unpooled <- list(N=nrow(X),           #Nr of obs
-                         K=length(unique(y)),  #Possible outcomes
-                         D=ncol(X)+1,            #NR of predictors
-                         x=cbind(1,X),                 #Predictor Matrix
-                         y=as.numeric(y),  #Dependent Variable)
-                         n_cluster = length(unique(cluster)),
-                         cluster = cluster
-                         )  
+create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE, oversample = FALSE){
+  y <-  factor(y_df_train$DV)
+  y <- y[subset]
+  
+  if(with_zip){
+    WX <- WX_df_train[subset,WX_interest]
+    WX_prior <- WX_df_train[subset_prior_mean, WX_interest]
+    #Test dataframes
+    y_test <- factor(y_df_test$DV)
+    WX_test <- WX_df_test[, WX_interest]
+  }else{
+    WX <- WX_df_train[subset,X_interest]
+    WX_prior <- WX_df_train[subset_prior_mean, X_interest]
+    #Test dataframes
+    y_test <- factor(y_df_test$DV)
+    WX_test <- WX_df_test[, X_interest]
+  }
+  
+  
+  cluster <- WX_df_train$labels[subset]
+  cluster_test <- WX_df_test$labels
+  
+  if(oversample){
+    oversampled<- upSample(x = cbind(cluster, WX), 
+                           y = y)
+    cluster <- oversampled$cluster
+    y <- oversampled$Class
+    WX <- oversampled[,!(names(oversampled) %in% c('Class', 'cluster'))]
+  }
+  
+  datlist <- list(N=nrow(WX),           #Nr of obs
+                  K=length(unique(y)),  #Possible outcomes
+                  D=ncol(WX)+1,            #NR of predictors
+                  x=cbind(1,WX),                 #Predictor Matrix
+                  y=as.numeric(y),  #Dependent Variable)
+                  n_cluster = length(unique(cluster)), #Length of cluster
+                  cluster = cluster+1, #Cluster
+                  
+                  boolean_test = 0, #Whether to test or not
+                  generate = 0,
+                  
+                  y_test = y_test, #dependent test variable (probably not needed for stan but easy for prediction)
+                  x_test = cbind(1,WX_test), #Test set
+                  N_test = nrow(WX_test), #observations in testset
+                  cluster_test = cluster_test+1, #clusters in test set
+                  n_cluster_test = length(unique(cluster_test)), #No.  cluster in testset.
+                  
+                  y_prior = y[subset_prior_mean],
+                  WX_prior = WX_prior,
+                  prior_set = 0
+  )
+  
+  if(length(subset_prior_mean)>0){
+    mean <- coef(multinom(datlist$y_prior~., data = datlist$WX_prior))
+    datlist$prior_mean <- (mean)
+    
+  }else{
+    datlist$prior_mean <- matrix(rep( 0, len=(datlist$K-1)*datlist$D), nrow = (datlist$K-1))
+  }
+  
+  datlist
+}
 
+create_datlist(small_subset, with_zip=FALSE, oversample=FALSE)
 
 
 W <- W_df[,W_interest]

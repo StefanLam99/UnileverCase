@@ -129,7 +129,7 @@ estimate_model <- function(datlist, model_type, gqs = TRUE, test = TRUE, prior_s
     if(save){
       saveRDS(b.out, "./stan_stuff/stan_model_output/unpooledmultilog.rds")
     }
-  }else{
+  }else if(model_type==3){
     b.out <- stan(file='./stan_stuff/multilog_based_on_mcstan.stan',
                   data=datlist,
                   iter = iter,
@@ -138,6 +138,12 @@ estimate_model <- function(datlist, model_type, gqs = TRUE, test = TRUE, prior_s
     if(save){
       saveRDS(b.out, "./stan_stuff/stan_model_output/unpooledhierarchical.rds")
     }
+  }else if(model_type==4){
+    b.out <- stan(file='./stan_stuff/multilog_based_on_mcstan_multinormal.stan',
+                  data=datlist,
+                  iter = iter,
+                  chains = chains,
+                  seed = 12591)
   }
   b.out
 }
@@ -188,7 +194,9 @@ parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
   }else{
     stop("implement this one")
   }
-  if(clusters){
+  
+  #CLUSTER BETA
+  if(clusters & par_interest=='beta'){
     print(dim(mcmc_int))
     ind_coeff <- apply(mcmc_int,c(2,3,4), quantile, probs=c(0.025, 0.5, 0.975))
     
@@ -214,23 +222,34 @@ parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
     df_beta_2 <- df_ind_unpooled(ind_coeff_2, 2)
     df_beta_3 <- df_ind_unpooled(ind_coeff_3, 3)
     df_ind <- rbind(df_beta_2, df_beta_3) 
-  }else if (par_interest == "mu"){
+  }
+  #CLUSTER MU
+  else if (par_interest == "mu"){
+    print('else if')
     ind_coeff<-apply(mcmc_int,c(2,3), quantile, probs=c(0.025,0.5,0.975))
     df_ind_mu <-function(ind_coeff){
-      df_ind_coeff <- data.frame(Coeff=rep(var_names,each=1),LI=c(ind_coeff[1,,1:length(var_names)]),Median=c(ind_coeff[2,,1:length(var_names)]),HI=c(ind_coeff[3,,1:length(var_names)]))
+      df_ind_coeff <- data.frame(Coeff=rep(var_names,each=2),
+                                 LI=c(ind_coeff[1,,1:length(var_names)]),
+                                 Median=c(ind_coeff[2,,1:length(var_names)]),
+                                 HI=c(ind_coeff[3,,1:length(var_names)]))
       
-      out <- paste(rep(c(2:3), each=length(var_names)))
+      out <- paste(rep(c(2:3), times=length(var_names)/2))
       df_ind_coeff$Outcome <- factor(out, levels=unique(out))
       
       df_ind_coeff
     }
     df_ind <- df_ind_mu(ind_coeff)
   }
+  #NO CLUSTER BETA
   else{
+    print('else')
     ind_coeff<-apply(mcmc_int,c(2,3), quantile, probs=c(0.025,0.5,0.975))
     
     df_ind_pooled <-function(ind_coeff){
-      df_ind_coeff <- data.frame(Coeff=rep(var_names,each=1),LI=c(ind_coeff[1,2:3,1:length(var_names)]),Median=c(ind_coeff[2,2:3,1:length(var_names)]),HI=c(ind_coeff[3,2:3,1:length(var_names)]))
+      df_ind_coeff <- data.frame(Coeff=rep(var_names,each=1),
+                                 LI=c(ind_coeff[1,2:3,1:length(var_names)]),
+                                 Median=c(ind_coeff[2,2:3,1:length(var_names)]),
+                                 HI=c(ind_coeff[3,2:3,1:length(var_names)]))
       
       out <- paste(rep(c(2:3), each=length(var_names)))
       df_ind_coeff$Outcome <- factor(out, levels=unique(out))
@@ -243,7 +262,7 @@ parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
   df_ind
 }
 
-obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only = TRUE, oversample = FALSE,
+obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only = TRUE, oversample = FALSE, prior_set=FALSE,
                           model_num = 1, iter = 2000, chains = 4){
   output <- list()
   
@@ -256,7 +275,12 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
   
   #Indices for other kind of datsets
   small_subset <- c(n_prior+1:n_prior+n_observations)
-  subset_prior_mean <- c(1:n_prior)
+  if (prior_set){
+    subset_prior_mean <- c(1:n_prior)
+  }else{
+    subset_prior_mean <-c()
+  }
+  
   small_subset_over <- c(sample(ind_perm, sample_length), 
                              ind_temp,
                              sample(ind_operational, sample_length))
@@ -276,11 +300,11 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
   
   if(restaurant_only){
     output$varnames <- c("INTERCEPT", X_interest)
-    output$datlist <- create_datlist(subset, with_zip = FALSE, oversample)
+    output$datlist <- create_datlist(subset, subset_prior_mean = subset_prior_mean, with_zip = FALSE, oversample)
     output$model <- estimate_model(output$datlist, model_type = model_num, prior_set=FALSE, iter=iter, chains=chains)
   }else{
     output$varnames <- c("INTERCEPT", WX_interest)
-    output$datlist <- create_datlist(subset, with_zip = TRUE, oversample)
+    output$datlist <- create_datlist(subset, subset_prior_mean = subset_prior_mean, with_zip = TRUE, oversample)
     output$model <- estimate_model(output$datlist, model_type = model_num, prior_set=FALSE, iter=iter, chains=chains)
   }
   
@@ -291,28 +315,38 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
     output$beta <- parameter_table(output$model, "beta", clusters=FALSE, var_names = output$varnames)
   }else if(model_num==2){
     output$beta <- parameter_table(output$model, "beta", clusters=TRUE, var_names = output$varnames)
-  }else{
+  }else if (model_num==3){
+    output$beta <- parameter_table(output$model, "beta", clusters=TRUE, var_names = output$varnames)
+    output$mu <- parameter_table(output$model, "mu", clusters=TRUE, var_names = output$varnames)
+  }else if (model_num==4){
     output$beta <- parameter_table(output$model, "beta", clusters=TRUE, var_names = output$varnames)
     output$mu <- parameter_table(output$model, "mu", clusters=TRUE, var_names = output$varnames)
   }
   output
 }
-
+# 
 rest_over_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
 rest_over_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
-rest_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
+# rest_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
+rest_over_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
+
 
 all_over_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
 all_over_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
-all_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
+# all_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
+all_over_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
+
 
 rest_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
 rest_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
-rest_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
+# rest_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
+rest_norm_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 4, iter = 2000, chains = 4)
+
 
 all_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
 all_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
-all_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
+# all_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
+all_norm_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 4, iter = 2000, chains = 4)
 
 
 #Additional possibly interesting diagnostics...
