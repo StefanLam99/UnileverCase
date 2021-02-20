@@ -27,7 +27,7 @@ colnames(y_df_test)<-c('name', 'DV')
 X_interest <- c("globalChannel_fastfood", "globalChannel_other", "rating")
 WX_interest <- c(X_interest, "INWONER","P_MAN","P_VROUW","P_INW_1524", "P_INW_2544", "P_INW_4564",
                  "P_INW_65PL","AV1_FOOD","AV3_FOOD", "AV5_FOOD","OAD", "P_WE_MIG_A", 
-                 "P_NW_MIG_A","GEM_HH_GR", "UITKMINAOW",  "P_HINK_HH", "log_median_inc" )
+                 "P_NW_MIG_A","GEM_HH_GR", "UITKMINAOW",  "P_HINK_HH", "log_median_inc", "AFS_TREINS","AFS_TRNOVS","AFS_OPRIT" )
 
 table(y_df_train$DV) #1 = OPERATIONAl, 2= PERMANENTLY CLOSED, 3 = TEMPORARILY CLOSED
 y_df_train$DV <- factor(y_df_train$DV)
