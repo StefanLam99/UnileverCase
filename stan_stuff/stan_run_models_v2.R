@@ -323,44 +323,44 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
   }
   output
 }
+# MAX
+# rest_over_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
+# rest_over_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
+# # rest_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
+# rest_over_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
 # 
-rest_over_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
-rest_over_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
-# rest_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
-rest_over_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
-
-
-all_over_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
-all_over_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
+# 
+# all_over_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
+# all_over_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
 # all_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
-all_over_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
+# all_over_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
 
-
+#BART
+print('rest1')
 rest_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
+print('rest2')
 rest_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
 # rest_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
+print('rest4')
 rest_norm_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 4, iter = 2000, chains = 4)
 
-
+print('all1')
 all_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
+print('all2')
 all_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
 # all_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
+print('all4')
 all_norm_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 4, iter = 2000, chains = 4)
 
 
-#Additional possibly interesting diagnostics...
-temp <- rstan::extract(output_2$model)
-#If we Include a model about the data distribution corresponding to the plot below we have a nice argument to the 
-#Bootstrapping...
-
-#Interesting plot of the distribution
-ppc_stat_grouped(output_2$datlist$y, temp$y_pred_insample, group = output_2$datlist$y )
-
-#For some diagnostic plots
-launch_shinystan(output_2$model)
-
-
-
-
-
+# #Additional possibly interesting diagnostics...
+# temp <- rstan::extract(output_2$model)
+# #If we Include a model about the data distribution corresponding to the plot below we have a nice argument to the 
+# #Bootstrapping...
+# 
+# #Interesting plot of the distribution
+# ppc_stat_grouped(output_2$datlist$y, temp$y_pred_insample, group = output_2$datlist$y )
+# 
+# #For some diagnostic plots
+# launch_shinystan(output_2$model)
 
