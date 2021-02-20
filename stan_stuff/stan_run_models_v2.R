@@ -11,6 +11,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
 
 setwd("C:/Users/bartd/Erasmus/Erasmus_/Jaar 4/Master Econometrie/Seminar/UnileverCase_Conda/")
+setwd("/Users/maxbroers/Documents/Github/UnileverCase")
 
 ####DATA####
 ##LOAD DATA
