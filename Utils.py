@@ -1,5 +1,5 @@
+# Some utility functions used in our methods for two-stage-clustering
 import numpy as np
-import sys
 
 
 def euclidean_distance(x, y):
@@ -72,16 +72,18 @@ def infer_data_labels(pred_clusters, cluster_labels):
 
     return predicted_labels
 
+
 def normalise(df):
     """
     Normalizes a dataframe to be in the range [0,1], without altering the distribution, using a min-max scale.
     :param df: dataframe containing the data
     :retrun normalized dataframe
     """
+    temp_df = df.copy()
     all_df = df.copy()
-    df.dropna(inplace=True)
-    max = np.max(df, axis=0)
-    min = np.min(df, axis=0)
+    temp_df.dropna(inplace=True)
+    max = np.max(temp_df, axis=0)
+    min = np.min(temp_df, axis=0)
     all_df = (all_df-min)/(max-min)
     return all_df, max.values, min.values
 
@@ -218,6 +220,7 @@ def make_latex_table_MultiIndex(df, scale=0.6, caption="", label="", decimals=3)
     print("\\end{tabular}}")
     print("\\end{table}")
 
+
 def make_latex_table_MultiIndex_inversed(df, dict_var_names, scale=0.6, caption="", label="", decimals=3):
     """
     Make a latex table from a MultiIndex df with two levels from get_numerical_statistics_clusters_df_inversed
@@ -322,9 +325,6 @@ def make_latex_table_MultiIndex_inversed(df, dict_var_names, scale=0.6, caption=
     print("\\end{table}")
 
     print(indices_per_group)
-
-
-
 
 
 def rgb2hex(r,g,b):

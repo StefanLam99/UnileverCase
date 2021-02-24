@@ -22,7 +22,7 @@ def elbow_TSC(cluster_df, n_cluster):
     W = pd.DataFrame(W)
     res = list()
     for n in n_cluster:
-        kmeans = GaussianMixture(n_components=n)
+        kmeans = GaussianMixture(n_components=n, max_iter=5000, n_init=10, init_params="random")
         # kmeans = KMeans(n_clusters=center)
         # Then fit the model to your data using the fit method
         labels = kmeans.fit_predict(W)
@@ -60,7 +60,7 @@ def elbow_TSC_Kmeans(cluster_df,n_cluster):
     W = pd.DataFrame(W)
     res = list()
     for n in n_cluster:
-        kmeans = KMeans(n_clusters=n)
+        kmeans = KMeans(n_clusters=n, random_state=0, algorithm="full", max_iter=5000, n_init=10)
         # Then fit the model to your data using the fit method
         labels = kmeans.fit_predict(W)
         # labels = kmeans.predict(cluster_df_np)
@@ -90,7 +90,7 @@ def elbowKmeans(cluster_df,n_cluster):
 
     res = list()
     for n in n_cluster:
-        kmeans = KMeans(n_clusters=n)
+        kmeans = KMeans(n_clusters=n, random_state=0, algorithm="full", max_iter=5000, n_init=10)
         kmeans.fit(cluster_df)
         res.append(np.average(np.min(cdist(cluster_df, kmeans.cluster_centers_, 'euclidean'), axis=1)))
 
@@ -105,7 +105,7 @@ def elbow_gmm(cluster_df,n_cluster):
     #cluster_df = pd.DataFrame(cluster_df)
     res = list()
     for n in n_cluster:
-        model = GaussianMixture(n_components= n)
+        model = GaussianMixture(n_components= n, max_iter=5000, n_init=10, init_params="random")
         model.fit(cluster_df)
         labels = model.predict(cluster_df)
         variables = cluster_df.columns
@@ -144,16 +144,16 @@ def davies_bouldin_score_TSC(W, cluster_df_np, center):
         score - the Davies Bouldin score for the TwoStageClustering model fit to the data
     '''
     # instantiate kmeans
-    kmeans2 = GaussianMixture(n_components=center)
-    kmeans = KMeans(n_clusters=center)
+    kmeans2 = GaussianMixture(n_components=center, max_iter=5000, n_init=10, init_params="random")
+    kmeans = KMeans(n_clusters=center, random_state=0, algorithm="full", max_iter=5000, n_init=10)
     # Then fit the model to your data using the fit method
     model = kmeans.fit_predict(W)
     # model = TST.predict(cluster_df_np)
     model2 = kmeans2.fit_predict(W)
     # Calculate Davies Bouldin score
 
-    score = davies_bouldin_score(W, model)
-    score2 = davies_bouldin_score(W, model2)
+    score = davies_bouldin_score(cluster_df_np, model)
+    score2 = davies_bouldin_score(cluster_df_np, model2)
     return score, score2
 
 def get_DB_TSC(cluster_df_np, centers):
@@ -193,7 +193,7 @@ def DB_score_Kmeans(cluster_df_subset, center):
         score - the Davies Bouldin score for the kmeans model fit to the data
     '''
     # instantiate kmeans
-    kmeans = KMeans(n_clusters=center)
+    kmeans = KMeans(n_clusters=center, random_state=0, algorithm="full", max_iter=5000, n_init=10)
     # Then fit the model to your data using the fit method
     model = kmeans.fit_predict(cluster_df_subset)
 
@@ -225,7 +225,7 @@ def DB_score_GMM(data, center):
         score - the Davies Bouldin score for the kmeans model fit to the data
     '''
     # instantiate kmeans
-    GMM = GaussianMixture(n_components=center)
+    GMM = GaussianMixture(n_components=center, max_iter=5000, n_init=10, init_params="random")
     # Then fit the model to your data using the fit method
     model = GMM.fit_predict(data)
 
@@ -252,17 +252,17 @@ def get_silhouette_2k(obs, NumberOfClusters):
     silhouette_score_values = list()
     classifier = TwoStageClustering(obs, max_iter_SOM=10000, normalize_data=False)
     classifier.train()
-    W, indices, _ = classifier.model_SOM.predict(cluster_df_np)
+    W, indices, _ = classifier.model_SOM.predict(obs)
 
     for i in NumberOfClusters:
-        kmeans = KMeans(n_clusters=i)
+        kmeans =  KMeans(n_clusters=i, random_state=0, algorithm="full", max_iter=5000, n_init=10)
         #kmeans = GaussianMixture(n_components=i)
         # kmeans = KMeans(n_clusters=center)
         labels = kmeans.fit_predict(W)
         print("Number Of Clusters:")
         print(i)
         print("Silhouette score value")
-        silhouette = sklearn.metrics.silhouette_score(W, labels, metric='euclidean', sample_size=None,
+        silhouette = sklearn.metrics.silhouette_score(obs, labels, metric='euclidean', sample_size=None,
                                                       random_state=None)
         print(silhouette)
         silhouette_score_values.append(silhouette)
@@ -279,16 +279,16 @@ def get_silhouette_2g(obs, NumberOfClusters):
     silhouette_score_values = list()
     classifier = TwoStageClustering(obs, max_iter_SOM=10000, normalize_data=False)
     classifier.train()
-    W, indices, _ = classifier.model_SOM.predict(cluster_df_np)
+    W, indices, _ = classifier.model_SOM.predict(obs)
 
     for i in NumberOfClusters:
         #kmeans = KMeans(n_clusters=i)
-        gmm = GaussianMixture(n_components=i)
+        gmm = GaussianMixture(n_components=i, max_iter=5000, n_init=10, init_params="random")
         labels = gmm.fit_predict(W)
         print("Number Of Clusters:")
         print(i)
         print("Silhouette score value")
-        silhouette = sklearn.metrics.silhouette_score(W, labels, metric='euclidean', sample_size=None,
+        silhouette = sklearn.metrics.silhouette_score(obs, labels, metric='euclidean', sample_size=None,
                                                       random_state=None)
         print(silhouette)
         silhouette_score_values.append(silhouette)
@@ -329,7 +329,7 @@ def silhouette_gmm(obs, NumberOfClusters=range(2, 11)):
     silhouette_score_values = list()
 
     for i in NumberOfClusters:
-        kmeans = GaussianMixture(n_components=i)
+        kmeans = GaussianMixture(n_components=i, max_iter=5000, n_init=10, init_params="random")
         labels = kmeans.fit_predict(obs)
         print("Number Of Clusters:")
         print(i)
@@ -355,7 +355,7 @@ def elbow_tsc_kmeans(obs):
     res = []
     K = range(2, 11)
     for k in K:
-        kmeanModel = KMeans(n_clusters=k)
+        kmeanModel = KMeans(n_clusters=k, random_state=0, algorithm="full", max_iter=5000, n_init=10)
         kmeanModel.fit(W)
         distortions.append(kmeanModel.inertia_)
         res.append(np.sum(np.min(cdist(W, kmeanModel.cluster_centers_, 'euclidean'), axis=1)))
@@ -376,7 +376,7 @@ def elbow_kmeans(df):
     distortions = []
     K = range(1, 11)
     for k in K:
-        kmeanModel = KMeans(n_clusters=k)
+        kmeanModel = KMeans(n_clusters=k, random_state=0, algorithm="full", max_iter=5000, n_init=10)
         kmeanModel.fit(df)
         distortions.append(kmeanModel.inertia_)
     print(distortions)
@@ -390,12 +390,13 @@ def elbow_kmeans(df):
 if __name__ == '__main__':
     #Load the data
 
-    cluster_df = pd.read_csv("Data/zipcodedata_KNN_normalized_version_6.csv")
+    cluster_df = pd.read_csv("Data/zipcodedata_KNN_normalized_version_8.csv")
+    cluster_df = cluster_df.iloc[:,1:]
     cluster_df_np = cluster_df.to_numpy()
     #cluster_df = minmax_scale(cluster_df, axis=0)
 
    # DAVIES BOULDIN SCORE
-    rangeK = list(range(2, 9))
+    rangeK = list(range(2, 10))
     scores1 = get_DB_Kmeans(cluster_df, centers= rangeK)
     scores2 = get_DB_GMM(cluster_df, centers= rangeK)
     k2, g2 = get_DB_TSC(cluster_df_np, centers = rangeK)
@@ -413,7 +414,7 @@ if __name__ == '__main__':
 
     #distortions = elbow_tsc_kmeans(cluster_df_np)
     #distortions = elbow_kmeans(cluster_df)
-    K = range(2, 9)
+    K = range(2, 10)
     plt.plot(K, res2, 'cx-', linestyle='--', label="TSC - GMM")
     plt.plot(K, res3, 'rx-', linestyle='--', label="Kmeans")
     plt.plot(K, res1, 'gx-', linestyle='--', label="TSC - Kmeans")

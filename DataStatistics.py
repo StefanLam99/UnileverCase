@@ -1,14 +1,13 @@
 import numpy as np
 import pandas as pd
-from DataSets import UFS_Universe_NL, UFS_Universe_NL_ratings, Neighborhood_Descriptives, zipcode_data_2017, zipcode_data_2019
+from DataSets import UFS_Universe_NL, Neighborhood_Descriptives
 import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
 from matplotlib.ticker import NullFormatter
 from Utils import make_dir
 from time import time
 from scipy import stats
 pd.set_option('display.expand_frame_repr', False)  # dataframes will be printed out without a line break
+
 
 def get_class_counts(X):
     '''
@@ -143,6 +142,7 @@ def get_numerical_statistics_clusters_df(df, clusters, var_names, stat_names=["m
     #result_df["observations"] = observations  # add observations to the second level of the last column
     return result_df.round(round)
 
+
 def get_numerical_statistics_clusters_df_inversed(df, clusters, dict_var_names, stat_names=["mean", "std", "max", "min"], round=3):
     """
     Method to obtain the statistics of the clusters
@@ -206,6 +206,7 @@ def get_numerical_statistics_clusters_df_inversed(df, clusters, dict_var_names, 
     result_df = pd.DataFrame(result, index=indices_row, columns=indices_col)
     return result_df.round(round)
 
+
 def show_numerical_statistics_clusters(X, clusters):
     '''
     Method to print the statistics from get_numerical_statistics_clusters(X, clusters)
@@ -248,6 +249,7 @@ def get_categorical_counts_clusters(X, clusters):
 
     return dict_cluster_stats
 
+
 def get_categorical_counts_clusters_df(df, clusters, var_names):
     """
     Method to obtain the counts of categorical data for the clusters
@@ -270,13 +272,15 @@ def get_categorical_counts_clusters_df(df, clusters, var_names):
 
     # column indices
     result = np.zeros((n_clusters, n_classes))
+    result_counts = np.zeros((n_clusters, n_classes))
     tuples = list(zip(first_level, second_level))
     indices_col = pd.MultiIndex.from_tuples(tuples, names=["variable", "class"])
 
     # row indices
     #indices_row = ["cluster " + str(int(i)) for i in range(n_clusters)]
-    dict_clusters = get_numerical_statistics_clusters(df[var_names[0]], clusters)
+    dict_clusters = get_categorical_counts_clusters(df[var_names[0]], clusters)
     indices_row = ["cluster " + str(e) for e in dict_clusters.keys()]
+    indices_row += ["Total"]
 
     # get the values for the results:
     cur_len_cols = 0  # keeps track of the current position of the column
@@ -286,27 +290,28 @@ def get_categorical_counts_clusters_df(df, clusters, var_names):
         observations = np.zeros(n_clusters)  # this is repetitive, but works
         for j, cluster in enumerate(dict_clusters.keys()):  # might not be sorted, so do it in this way
             for k, class_name in enumerate(list(set(df[var_name]))):  # iterate over all classes
+
                 result[j, k+cur_len_cols] = dict_clusters[cluster][class_name]
-                observations[j] +=  dict_clusters[cluster][class_name]
+                result_counts[j, k + cur_len_cols] = dict_clusters[cluster][class_name]
+                observations[j] += dict_clusters[cluster][class_name]
+            result[j,:] = result[j, :] / observations[j]
         cur_len_cols +=len(set(df[var_name]))
 
+    last_row = np.sum(result_counts, axis=0)
+    last_row = last_row/np.sum(observations)
+    result = np.vstack((result, last_row.reshape((1,-1))))
     result_df = pd.DataFrame(result, index=indices_row, columns=indices_col)
-    result_df["Observations"] = observations
-    return result_df.astype(int)
+    observations = np.concatenate((observations.reshape((1,-1)), np.array(np.sum(observations)).reshape((1,-1))), axis=1)
+    result_df["Observations"] = observations.reshape((-1,1))
+
+    return result_df
 
 
 def plot_clusters(X_embedded, labels, title="", save_path=None, s=1):
     """
-    Visualises the clusters in a 2D plot bij reducing the dimensions of the original data X
-    to 2 dimensions with PCA
+    Visualises the observations from X_embedded with the corresponding clusters in a 2D plot
     """
-    n_plots = len(labels)
-    ''' 
-    # sort the labels and data so we can get the same colors for multiple plots:
-    sort_indices = np.argsort(labels)
-    X_sorted = X_embedded[sort_indices]
-    labels_sorted = labels[sort_indices]
-    '''
+
     #  make the plots
     fig, ax = plt.subplots()
     ax.xaxis.set_major_formatter(NullFormatter())
@@ -326,7 +331,6 @@ def plot_clusters(X_embedded, labels, title="", save_path=None, s=1):
 
 
 if __name__ == '__main__':
-
     '''
     Some statistics about the restaurants (some examples):
     '''

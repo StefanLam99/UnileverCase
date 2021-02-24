@@ -141,43 +141,9 @@ class SOM:
 
 
 
-    def plot(self):
-        # fig = plt.figure()
-#
-        # ax = fig.add_subplot(111, aspect='equal')
-        # ax.set_xlim((0, self.map.shape[0] + 1))
-        # ax.set_ylim((0, self.map.shape[1] + 1))
-        # ax.set_title('Self-Organising Map after %d iterations' % self.max_iter)
-#
-        # # plot
-        # for x in range(1, self.map.shape[0] + 1):
-        #     for y in range(1, self.map.shape[1] + 1):
-        #         ax.add_patch(patches.Rectangle((x - 0.5, y - 0.5), 1, 1,
-        #                                        facecolor=self.map[x - 1, y - 1, :],
-        #                                        edgecolor='none'))
-        #plt.show()
-        plt.imshow(self.map[:, :, 1], cmap='hot', interpolation='nearest')
-        plt.show()
-        plt.imshow(self.map[:, :, 2], cmap='hot', interpolation='nearest')
-        plt.show()
-        plt.imshow(self.map[:, :, 3], cmap='hot', interpolation='nearest')
-        plt.show()
-        plt.imshow(self.map[:, :, 4], cmap='hot', interpolation='nearest')
-        plt.show()
 
 
 
-if __name__ == '__main__':
-    data = load_digits()['data']
-    targets = load_digits()['target']
-    SOM = SOM(X=data, map_shape=(10,10), max_iter=10000)
-    SOM.plot()
-    SOM.train()
-    SOM.plot()
-
-    print(SOM.map)
-    print(np.shape(data))
-    print(np.shape(SOM.map))
 
 
 

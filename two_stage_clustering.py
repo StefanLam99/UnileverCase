@@ -1,15 +1,13 @@
+# Combining the SOM network with a partitive clustering method (k-means/GMM)
+# Author: Stefan Lam
 import numpy as np
-from Utils import hit_rate, infer_cluster_labels, infer_data_labels, make_dir
+from Utils import *
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import normalize, minmax_scale
 from SOM import SOM
 from time import time
 import pickle as pkl
-from sklearn.datasets import load_digits
-#from keras.datasets import mnist
-import SimpSOM as sps
-import sys
 #np.set_printoptions(threshold=sys.maxsize)
 
 
