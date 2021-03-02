@@ -11,7 +11,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
 
 setwd("C:/Users/bartd/Erasmus/Erasmus_/Jaar 4/Master Econometrie/Seminar/UnileverCase_Conda/")
-setwd("/Users/maxbroers/Documents/Github/UnileverCase")
+# setwd("/Users/maxbroers/Documents/Github/UnileverCase")
 
 ####DATA####
 ##LOAD DATA
@@ -20,15 +20,23 @@ y_df_train <- read.csv("./Data/preprocessedData/y_train.csv", header = FALSE)
 WX_df_test <- read.csv("./Data/preprocessedData/WX_test.csv")
 y_df_test <- read.csv("./Data/preprocessedData/y_test.csv", header = FALSE)
 
+WX_df_train <- read.csv("./Data/preprocessedData/WX_tr_re.csv")
+y_df_train <- read.csv("./Data/preprocessedData/y_tr_re.csv", header = FALSE)
+WX_df_test <- read.csv("./Data/preprocessedData/WX_test.csv")
+y_df_test <- read.csv("./Data/preprocessedData/y_test.csv", header = FALSE)
+
 
 ##Choose columns of interest (Can also be done in python)
 colnames(y_df_train) <- c('name', 'DV')
 colnames(y_df_test)<-c('name', 'DV')
 
+
 X_interest <- c("globalChannel_fastfood", "globalChannel_other", "rating")
-WX_interest <- c(X_interest, "INWONER","P_MAN","P_VROUW","P_INW_1524", "P_INW_2544", "P_INW_4564",
-                 "P_INW_65PL","AV1_FOOD","AV3_FOOD", "AV5_FOOD","OAD", "P_WE_MIG_A", 
-                 "P_NW_MIG_A","GEM_HH_GR", "UITKMINAOW",  "P_HINK_HH", "log_median_inc", "AFS_TREINS","AFS_TRNOVS","AFS_OPRIT" )
+WX_interest <- c(X_interest, "P_VROUW","P_MAN","P_INW_1524", "P_INW_2544", "P_INW_4564",
+                 "P_INW_65PL", "AV1_FOOD","AV3_FOOD", "AV5_FOOD","OAD", "P_WE_MIG_A", 
+                 "P_NW_MIG_A","GEM_HH_GR", "P_UITKMINAOW",  "P_HINK_HH", "log_median_inc", "AFS_TREINS","AFS_TRNOVS","AFS_OPRIT" )
+
+# "P_MAN", "AV1_FOOD","AV3_FOOD"
 
 table(y_df_train$DV) #1 = OPERATIONAl, 2= PERMANENTLY CLOSED, 3 = TEMPORARILY CLOSED
 y_df_train$DV <- factor(y_df_train$DV)
@@ -142,8 +150,9 @@ estimate_model <- function(datlist, model_type, gqs = TRUE, test = TRUE, prior_s
     b.out <- stan(file='./stan_stuff/multilog_based_on_mcstan_multinormal.stan',
                   data=datlist,
                   iter = iter,
-                  chains = chains,
-                  seed = 12591)
+                  chains = chains, init_r = 0.9,
+                  seed = 12592
+                  )
   }
   b.out
 }
@@ -282,7 +291,7 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
   }
   
   small_subset_over <- c(sample(ind_perm, sample_length), 
-                             ind_temp,
+                             sample(ind_temp, min(sample_length, length(ind_temp))),
                              sample(ind_operational, sample_length))
   small_subset_undersampling <- c(sample(ind_perm, length(ind_temp)), 
                                   ind_temp,
@@ -319,8 +328,8 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
     output$beta <- parameter_table(output$model, "beta", clusters=TRUE, var_names = output$varnames)
     output$mu <- parameter_table(output$model, "mu", clusters=TRUE, var_names = output$varnames)
   }else if (model_num==4){
-    output$beta <- parameter_table(output$model, "beta", clusters=TRUE, var_names = output$varnames)
-    output$mu <- parameter_table(output$model, "mu", clusters=TRUE, var_names = output$varnames)
+    # output$beta <- parameter_table(output$model, "beta", clusters=TRUE, var_names = output$varnames)
+    # output$mu <- parameter_table(output$model, "mu", clusters=TRUE, var_names = output$varnames)
   }
   output
 }
@@ -336,22 +345,44 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
 # all_over_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 3, iter = 2000, chains = 4)
 # all_over_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
 
-#BART
-print('rest1')
-rest_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
-print('rest2')
-rest_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
-# rest_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
-print('rest4')
-rest_norm_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 4, iter = 2000, chains = 4)
-
-print('all1')
-all_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
-print('all2')
-all_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
+# #BART
+# print('all1')
+# all_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
+# print('all2')
+# all_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
 # all_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
-print('all4')
-all_norm_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 4, iter = 2000, chains = 4)
+# all_norm_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = FALSE, model_num = 4, iter = 2000, chains = 4)
+
+# print('all4')
+# #TODO RUN 4
+# 
+# print('rest1')
+# rest_norm_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 1, iter = 2000, chains = 4)
+# print('rest2')
+# rest_norm_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 2, iter = 2000, chains = 4)
+# # rest_norm_3.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 3, iter = 2000, chains = 4)
+# print('rest4')
+# rest_norm_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = FALSE, model_num = 4, iter = 2000, chains = 4)
+
+
+#SMOTE
+#BART
+print('all1')
+all_smote_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
+print('all2')
+all_smote_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
+all_smote_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
+
+# print('all4')
+
+#MAX 
+print('rest1')
+rest_smote_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
+print('rest2')
+rest_smote_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
+print('rest4')
+rest_smote_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
+
 
 
 # #Additional possibly interesting diagnostics...
