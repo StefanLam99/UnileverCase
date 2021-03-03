@@ -15,7 +15,7 @@ class SOM:
     Class to make a SOM network model
     """
 
-    def __init__(self, X, map_shape = (5,5), init_lr=0.01, init_response=1, max_iter=20000, normalize_data=False, seed=0):
+    def __init__(self, X, map_shape = (8,8), init_lr=0.1, init_response=1, max_iter=10000, normalize_data=False, seed=0):
         np.random.seed(seed)  # set the seed for this SOM network
 
         # input data and output map
@@ -30,7 +30,7 @@ class SOM:
 
         # constants for the update rule
         self.init_lr = init_lr
-        self.init_radius = max(self.M, self.d)/2
+        self.init_radius = max(self.map_shape[0], self.map_shape[1])/2
         #self.init_radius = 1
         self.init_response = init_response
         self.time_constant = self.max_iter/np.log(self.init_radius)
@@ -137,47 +137,13 @@ class SOM:
             prototypes[i, :], indices[i,:] = self.BMU(X[i,:])
             labels[i] = int(indices[i, 1] + indices[i, 0]*self.map_shape[1])
 
-        return prototypes, indices, labels
+        return prototypes, indices, labels.astype(int)
 
 
 
-    def plot(self):
-        # fig = plt.figure()
-#
-        # ax = fig.add_subplot(111, aspect='equal')
-        # ax.set_xlim((0, self.map.shape[0] + 1))
-        # ax.set_ylim((0, self.map.shape[1] + 1))
-        # ax.set_title('Self-Organising Map after %d iterations' % self.max_iter)
-#
-        # # plot
-        # for x in range(1, self.map.shape[0] + 1):
-        #     for y in range(1, self.map.shape[1] + 1):
-        #         ax.add_patch(patches.Rectangle((x - 0.5, y - 0.5), 1, 1,
-        #                                        facecolor=self.map[x - 1, y - 1, :],
-        #                                        edgecolor='none'))
-        #plt.show()
-        plt.imshow(self.map[:, :, 1], cmap='hot', interpolation='nearest')
-        plt.show()
-        plt.imshow(self.map[:, :, 2], cmap='hot', interpolation='nearest')
-        plt.show()
-        plt.imshow(self.map[:, :, 3], cmap='hot', interpolation='nearest')
-        plt.show()
-        plt.imshow(self.map[:, :, 4], cmap='hot', interpolation='nearest')
-        plt.show()
 
 
 
-if __name__ == '__main__':
-    data = load_digits()['data']
-    targets = load_digits()['target']
-    SOM = SOM(X=data, map_shape=(10,10), max_iter=10000)
-    SOM.plot()
-    SOM.train()
-    SOM.plot()
-
-    print(SOM.map)
-    print(np.shape(data))
-    print(np.shape(SOM.map))
 
 
 

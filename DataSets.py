@@ -105,6 +105,22 @@ def zipcode_data_2019():
     data = pd.read_csv('Data/zipcode_data_cbs/zipcode_data_2019.csv', sep='|')
     data = data.rename(columns={'PC4': 'pc4'}) # rename PC4 to pc4 to make it consistent with the other datasets
     return data
+
+def downloaded_zipcode_2017():
+    data = pd.read_excel("Data/zipcode_data_cbs/CBS_PC4_2017_v3.xlsx")
+
+    data = data.rename(columns={'PC4': 'pc4'})  # rename PC4 to pc4 to make it consistent with the other datasets
+    return data
+
+
+def medianincome_zipcode_data():
+    median = pd.read_excel("Data/zipcode_data_cbs/mediaan-besteedbaar-inkomen.XLSX", header=None)
+    # Delete first 14 rows because they contain the description of the data
+    for i in range(0, 14):
+        median = median.drop(median.index[0])
+    median.columns = ["pc4", "huishouden", "medianIncome", "inc_p_20", "inc_p_40", "inc_p_60", "inc_p_80", "inc_p_100"]
+    return median
+
 ''' 
 zipcode_data_2019()
 zipcode_data_2017()

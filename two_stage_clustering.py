@@ -1,15 +1,13 @@
+# Combining the SOM network with a partitive clustering method (k-means/GMM)
+# Author: Stefan Lam
 import numpy as np
-from Utils import hit_rate, infer_cluster_labels, infer_data_labels, make_dir
+from Utils import *
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import normalize, minmax_scale
 from SOM import SOM
 from time import time
 import pickle as pkl
-from sklearn.datasets import load_digits
-#from keras.datasets import mnist
-import SimpSOM as sps
-import sys
 #np.set_printoptions(threshold=sys.maxsize)
 
 
@@ -19,7 +17,7 @@ class TwoStageClustering:
     is a clustering method such as k-means or GMM.
     """
 
-    def __init__(self, X, map_shape=(5,5), n_clusters=10, init_lr=0.01, init_response=1, max_iter_SOM=20000, max_iter_clus=1000, clus_method="kmeans", normalize_data=False, seed=0):
+    def __init__(self, X, W = None, map_shape=(8,8), n_clusters=10, init_lr=0.1, init_response=1, max_iter_SOM=10000, max_iter_clus=5000, clus_method="kmeans", normalize_data=False, seed=0):
 
         # data and SOM map shape
         self.X = X
@@ -28,6 +26,7 @@ class TwoStageClustering:
         (self.N, self.d) = np.shape(X)
         self.map_shape = map_shape
         self.M = map_shape[0] * map_shape[1]  # number of nodes in the network
+        self.W = W  # the weights of the output map
 
         # hyperparameters
         self.max_iter_SOM = max_iter_SOM
@@ -44,9 +43,9 @@ class TwoStageClustering:
         #  second stage model
         self.clus_method = clus_method
         if self.clus_method == "kmeans":
-            self.model_clus = KMeans(n_clusters=self.n_clusters, random_state=self.seed, algorithm="full", max_iter=self.max_iter_clus)
+            self.model_clus = KMeans(n_clusters=self.n_clusters, random_state=self.seed, algorithm="full", max_iter=self.max_iter_clus, n_init=10)
         else:
-            self.model_clus = GaussianMixture(n_components=self.n_clusters, max_iter=self.max_iter_clus)
+            self.model_clus = GaussianMixture(n_components=self.n_clusters, max_iter=self.max_iter_clus, n_init=10, init_params="random")
 
     def train(self, print_progress=True):
         """
@@ -54,17 +53,21 @@ class TwoStageClustering:
         """
 
         # training first stage SOM network
-        print("Start training the two stage clustering procedure...")
+
         t0 = time()  # starting time training SOM
-        self.model_SOM.train(print_progress=print_progress)
-        W = self.model_SOM.map  # 3D array containing the M prototypes
+        if self.W is not None:
+            self.model_SOM.map = self.W
+            print("The SOM is already trained! Continuing with the clusterig method...")
+        else:
+            print("Start training the two stage clustering procedure with %s..." % self.clus_method)
+            self.model_SOM.train(print_progress=print_progress)
+            self.W = self.model_SOM.map  # 3D array containing the M prototypes
 
         # fitting second stage clustering method
         t1 = time()  # starting time second stage clustering method
         print("Training %s clustering method..." % self.clus_method)
-        self.model_clus.fit(W.reshape((self.M, self.d)))  # reshape to a (M, d) matrix
+        self.model_clus.fit(self.W.reshape((self.M, self.d)))  # reshape to a (M, d) matrix
         print("%s clustering method with %d iterations finished in %.3f seconds" %(self.clus_method, self.max_iter_clus, time()-t1))
-        print('\n')
         print("The two stage clustering procedure with %s took %.3f" % (self.clus_method, time()-t0))
 
     def predict(self, X):
@@ -76,7 +79,7 @@ class TwoStageClustering:
         """
         W, indices, _ = self.model_SOM.predict(X)
         labels = self.model_clus.predict(W)
-        return labels
+        return labels.astype(int)
 
     def save(self, file_name=None):
         """
