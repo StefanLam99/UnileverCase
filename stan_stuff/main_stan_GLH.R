@@ -15,6 +15,7 @@ setwd("C:/Users/bartd/Erasmus/Erasmus_/Jaar 4/Master Econometrie/Seminar/Unileve
 
 ####DATA####
 ##LOAD DATA
+#Either resampled or 'normal' data
 WX_df_train <- read.csv("./Data/preprocessedData/WX_train.csv")
 y_df_train <- read.csv("./Data/preprocessedData/y_train.csv", header = FALSE)
 WX_df_test <- read.csv("./Data/preprocessedData/WX_test.csv")
@@ -36,12 +37,19 @@ WX_interest <- c(X_interest, "P_VROUW","P_MAN","P_INW_1524", "P_INW_2544", "P_IN
                  "P_INW_65PL", "AV1_FOOD","AV3_FOOD", "AV5_FOOD","OAD", "P_WE_MIG_A", 
                  "P_NW_MIG_A","GEM_HH_GR", "P_UITKMINAOW",  "P_HINK_HH", "log_median_inc", "AFS_TREINS","AFS_TRNOVS","AFS_OPRIT" )
 
-# "P_MAN", "AV1_FOOD","AV3_FOOD"
-
+#Check class proportions
 table(y_df_train$DV) #1 = OPERATIONAl, 2= PERMANENTLY CLOSED, 3 = TEMPORARILY CLOSED
 y_df_train$DV <- factor(y_df_train$DV)
 
-#FUNCTION TO CREATE DATALIST
+#### Creating Datalist and estimating the model ####
+#' Create the datalist used as input in stan
+#' 
+#' @param subset A subset of indices that will be used in the analysis
+#' @param subset_prior_mean Values that can be set as mean of the priors
+#' @param with_zip Boolean value whether to include zip and restaurant variable or only the zip variable
+#' @param oversample Boolean value whether to balance the classes
+#' 
+#' @return A datlist that can be given as input to stan
 create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE, oversample = FALSE){
   y <-  factor(y_df_train$DV)
   y <- y[subset]
@@ -104,8 +112,20 @@ create_datlist <-  function(subset, subset_prior_mean=c(), with_zip = TRUE, over
   
   datlist
 }
-#FUNCTION TO ESTIMATE MODELS
-#MODEL TYPE: 1 = multilog pooled, 2 = multilog unpooled, 3 = multilog with mu
+
+#' Function that estimates the Stan models: MODEL TYPE: 
+#' 
+#' @param datlist the output of the @function create_datlist()
+#' @param model_type Number of the model that should be estimated choice is
+#' 1 = multilog pooled, 2 = multilog unpooled, 3 = multilog with mu, 4 = simultaneous unpooled model 
+#' @param gqs Boolean whether or not to generate quantities after the estimation of stan models has been done (for example predictions)
+#' @param test Boolean whether or not to include the test set
+#' @param prior_set Boolean whether or not to give the priors a pre set mean
+#' @param save Boolean whether or not to save the computed models automatically
+#' @param iter number of iterations in every chain
+#' @param chains number of chains in the sampling
+#' 
+#' @return Estimated model
 estimate_model <- function(datlist, model_type, gqs = TRUE, test = TRUE, prior_set =TRUE, save = FALSE, iter = 1000, chains = 4){
   if(test){
     datlist$boolean_test <- 1
@@ -147,7 +167,7 @@ estimate_model <- function(datlist, model_type, gqs = TRUE, test = TRUE, prior_s
       saveRDS(b.out, "./stan_stuff/stan_model_output/unpooledhierarchical.rds")
     }
   }else if(model_type==4){
-    b.out <- stan(file='./stan_stuff/multilog_based_on_mcstan_multinormal.stan',
+    b.out <- stan(file='./stan_stuff/su_model.stan',
                   data=datlist,
                   iter = iter,
                   chains = chains, init_r = 0.9,
@@ -157,9 +177,15 @@ estimate_model <- function(datlist, model_type, gqs = TRUE, test = TRUE, prior_s
   b.out
 }
 
-####PREDICTION EVALUATION####
-#FUNCTION FOR CONTINGENCY MODEL
-#Average type: 1 = median, 2 = mean, 3 = mode
+####PREDICTION EVALUATION and parameter output####
+#' Function that creates a confusion matrix and other performance metrics
+#' 
+#' @param b.out the Stan object, output of @function estimate_model()
+#' @param datlist the output of @function create_datlist()
+#' @param average_type number to choose the way to obtain the centre of the data: 1 = median, 2 = mean, 3 = mode
+#' @param insample boolean on whether to compute insample or outsample performance measures
+#' 
+#' @return Returns the confusion matrix and other performance metrics
 contingency_table <- function(b.out, datlist, average_type = 1, insample=TRUE){
   fit <- b.out
   fit.ext <- rstan::extract(fit)
@@ -192,8 +218,16 @@ contingency_table <- function(b.out, datlist, average_type = 1, insample=TRUE){
   (confusionMatrix(prediction, reference=true_value))
 }
 
-#FUNCTION FOR Parameter MODEL
-#Obtain Parameter tables
+#'Function that creates a table of parameters of interest, the stan output does
+#'not name the variables so it's hard to see which coefficient belongs to which variable. 
+#'
+#' @param b.out stan object, output of the @function estimate_models()
+#' @param par_interest parameter of interest, either beta or mu
+#' @param cluster Whether the model included clusters
+#' @param var_names Variable names 
+#' 
+#' @return table with the median coefficients and the 2.5 and 97.5th quantile of the drawn samples 
+#' corresponding to a variable. 
 parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
   fit.ext <- rstan::extract(b.out)
   if(par_interest =="beta"){
@@ -271,6 +305,20 @@ parameter_table <- function(b.out, par_interest, clusters = TRUE, var_names){
   df_ind
 }
 
+####Function that links all the auxilary functions####
+#'Function that links all the auxilary functions together and returns the output for one of the model
+#'
+#'@param n_prior number of observations that are used in estimating the prior coefficients
+#'@param n_observations number of observations that will be used for the estimation (the more observations, the longer it takes)
+#'@param restaurant_only boolean variable whether or not we want to include restaurant and zip code data or only restaurant data
+#'@param oversample boolean variable whether or not we want to balance the dataset
+#'@param prior_set boolean whether or not we want to set prior beforehand or set the prior mean to zero
+#'@param model_num Number of the model that should be estimated choice is
+#' 1 = multilog pooled, 2 = multilog unpooled, 3 = multilog with mu, 4 = simultaneous unpooled model
+#'@param iter Number of iterations for the sampling
+#'@param chains Number of chains that will be sampled
+#' 
+#'@return a list with the output of the model, the datlist used, the parameter table and the confusion matrix and other performance measures
 obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only = TRUE, oversample = FALSE, prior_set=FALSE,
                           model_num = 1, iter = 2000, chains = 4){
   output <- list()
@@ -333,6 +381,10 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
   }
   output
 }
+
+
+
+####ESTIMATING THE MODELS####
 # MAX
 # rest_over_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
 # rest_over_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
@@ -367,15 +419,15 @@ obtain_output <- function(n_prior = 3000, n_observations =1000, restaurant_only 
 
 #SMOTE
 #BART
-print('all1')
-all_smote_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
-print('all2')
-all_smote_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
-all_smote_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
+# print('all1')
+# all_smote_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
+# print('all2')
+# all_smote_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 2, iter = 2000, chains = 4)
+# all_smote_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = FALSE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
 
 # print('all4')
 
-#MAX 
+# #MAX 
 print('rest1')
 rest_smote_1.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 1, iter = 2000, chains = 4)
 print('rest2')
@@ -383,16 +435,5 @@ rest_smote_2.output <- obtain_output(n_prior = 3000, n_observations = 3000, rest
 print('rest4')
 rest_smote_4.output <- obtain_output(n_prior = 3000, n_observations = 3000, restaurant_only = TRUE, oversample = TRUE, model_num = 4, iter = 2000, chains = 4)
 
-
-
-# #Additional possibly interesting diagnostics...
-# temp <- rstan::extract(output_2$model)
-# #If we Include a model about the data distribution corresponding to the plot below we have a nice argument to the 
-# #Bootstrapping...
-# 
-# #Interesting plot of the distribution
-# ppc_stat_grouped(output_2$datlist$y, temp$y_pred_insample, group = output_2$datlist$y )
-# 
-# #For some diagnostic plots
-# launch_shinystan(output_2$model)
+####END####
 
