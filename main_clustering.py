@@ -52,6 +52,7 @@ def main_train(version):
     var_names = data.columns[1:]  # exclude pc4
     stat_names = ["mean", "std"]
     titles = ["SOM + k-means", "SOM + GMM", "k-means", "GMM"]
+    titles_plots = ["TS k-means", "TS GMM", "k-means", "GMM"]
     s = 4  # size of points in visualisations
 
     # embed the data into two dimensions with t-SNE and PCA
@@ -80,12 +81,19 @@ def main_train(version):
         print('')
 
         # plot the clusters with pca and t-SNE
-        plot_clusters(X_tSNE, labels+1, title=titles[i], save_path=file_path_tSNE + titles[i], s=s)
-        plot_clusters(X_PCA, labels+1, title=titles[i], save_path=file_path_PCA + titles[i], s=s)
+        plot_clusters(X_tSNE, labels+1, title=titles_plots[i], save_path=file_path_tSNE + titles[i], s=s)
+        plot_clusters(X_PCA, labels+1, title=titles_plots[i], save_path=file_path_PCA + titles[i], s=s, loc="upper right")
 
         #  save labels:
+        pc4 = data['pc4'].values.reshape(np.shape(data)[0], 1)
+        labels = labels.reshape(np.shape(data)[0], 1)
+        ''' 
+        labels[labels==0] = -1
+        labels[labels==1] = 0
+        labels[labels==-1] = 1
+        '''
         pc4_labels = np.concatenate(
-            (data['pc4'].values.reshape(np.shape(data)[0], 1), labels.reshape(np.shape(data)[0], 1)), axis=1)
+            (pc4, labels), axis=1)
         pd.DataFrame(pc4_labels, columns=['pc4', 'labels']).astype(int).to_csv('Results/pc4_best_labels_version_' +str(version) + '_'+titles[i]+'.csv',
                                                                                index=False)
 
@@ -161,7 +169,7 @@ def main_results_best_model(version):
         demographic_age_names = [ 'P_INW_014', 'P_INW_1524', 'P_INW_2544',
            'P_INW_4564', 'P_INW_65PL']
         neighborhood_names = ["AFS_OPRIT", "AFS_TRNOVS", "AFS_TREINS",'AV1_FOOD', 'AV3_FOOD', 'AV5_FOOD', 'OAD']
-    elif version == 10:
+    elif version == 10 or version == 13:
         demographic_names = ['AANTAL_HH', 'P_MAN', 'P_VROUW', 'P_INW_014', 'P_INW_1524', 'P_INW_2544',
            'P_INW_4564', 'P_INW_65PL', 'P_NL_ACHTG', 'P_WE_MIG_A', 'P_NW_MIG_A', 'GEM_HH_GR', 'P_UITKMINAOW',
            'P_LINK_HH', 'P_HINK_HH', 'log_median_inc']
@@ -186,7 +194,7 @@ def main_results_best_model(version):
 
     # parameters for tables
     scale = 0.5
-    stat_names = ["mean", "std"]
+    stat_names = ["mean", "median", "std"]
 
 
     for table, caption in zip(tables, captions):
@@ -239,10 +247,101 @@ def main_exploratory_analysis(version):
     print("Total missing values in 'closed' in cluster 1: %d" % data_restaurants_cluster_1["closed"].isnull().sum())
     print("Total missing values in 'closed' in cluster 2: %d" % data_restaurants_cluster_2["closed"].isnull().sum())
 
+    #make_latex_table_MultiIndex(final_df)
+    #make_latex_table(final_df)
+
+def main_exploratory_analysis2():
+    df = pd.read_csv("Data/WX.csv")
+    N = len(df)
+    Y = pd.read_csv("Data/Y.csv", header=None)
+    df["Y"] = Y.iloc[:, 1]
+
+    GlobalChannel = []
+    for i in range(N):
+        if df.loc[i, "globalChannel_fastfood"] == 1:
+            GlobalChannel.append("fastfood")
+        elif df.loc[i, "globalChannel_other"] == 1:
+            GlobalChannel.append("other")
+        else:
+            GlobalChannel.append("no dining")
+    df["GlobalChannel"] = GlobalChannel
+    final_df = get_categorical_counts_clusters_df(df, df["labels"], var_names=["GlobalChannel", "Y"])
+    print(df)
+    print(final_df)
+    make_latex_table_MultiIndex(final_df, decimals=5)
+
+def main_exploratory_analysis_complete():
+    df1 = pd.read_csv("Data/WX_train_complete.csv")
+
+    Y1 = pd.read_csv("Data/Y_train_complete.csv", header=None)
+    #df1["Y"] = Y1.iloc[:, 1]
+    df2 = pd.read_csv("Data/WX_test_complete.csv")
+
+    Y2 = pd.read_csv("Data/Y_test_complete.csv", header=None)
+    #df2["Y"] = Y2.iloc[:, 1]
+    df = pd.concat([df1, df2], axis=0)
+    Y = pd.concat([Y1, Y2], axis=0)
+    df["Y"] = Y.iloc[:,1]
+    GlobalChannel = []
+    N = len(df)
+    df = df.reset_index()
+    print(N)
+    print(df)
+    for i in range(N):
+        if df.loc[i, "globalChannel_fastfood"] == 1:
+            GlobalChannel.append("Fastfood")
+        elif df.loc[i, "globalChannel_no_dining"] == 1:
+            GlobalChannel.append("No dining")
+        elif df.loc[i, "globalChannel_dining"] == 1:
+            GlobalChannel.append("Dining")
+        else:
+             GlobalChannel.append("Other")
+    df["GlobalChannel"] = GlobalChannel
+    final_df = get_categorical_counts_clusters_df(df, df["labels"], var_names=["GlobalChannel", "Y"])
+
+    print(final_df)
+    make_latex_table_MultiIndex(final_df, decimals=5)
+
+def main_exploratory_analysis_without_outliers():
+    df1 = pd.read_csv("Data/WX_train.csv")
+
+    Y1 = pd.read_csv("Data/Y_train.csv", header=None)
+    #df1["Y"] = Y1.iloc[:, 1]
+    df2 = pd.read_csv("Data/WX_test.csv")
+
+    Y2 = pd.read_csv("Data/Y_test.csv", header=None)
+    #df2["Y"] = Y2.iloc[:, 1]
+    df = pd.concat([df1, df2], axis=0)
+    Y = pd.concat([Y1, Y2], axis=0)
+    df["Y"] = Y.iloc[:,1]
+    GlobalChannel = []
+    N = len(df)
+    df = df.reset_index()
+    print(N)
+    print(df)
+    for i in range(N):
+        if df.loc[i, "globalChannel_fastfood"] == 1:
+            GlobalChannel.append("Fastfood")
+        elif df.loc[i, "globalChannel_no_dining"] == 1:
+            GlobalChannel.append("No dining")
+        elif df.loc[i, "globalChannel_dining"] == 1:
+            GlobalChannel.append("Dining")
+        else:
+             GlobalChannel.append("Other")
+    df["GlobalChannel"] = GlobalChannel
+    final_df = get_categorical_counts_clusters_df(df, df["labels"], var_names=["GlobalChannel", "Y"])
+
+    print(final_df)
+    make_latex_table_MultiIndex(final_df, decimals=5)
+
 if __name__ == '__main__':
-    version=10
+    version = 10
+
     # main_train(version)
+
     #main_results_best_model(version)
-    main_exploratory_analysis(version)
+    #main_exploratory_analysis2()
+    main_exploratory_analysis_without_outliers()
+    main_exploratory_analysis_complete()
     #main_statistics(version)
 

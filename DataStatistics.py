@@ -250,7 +250,7 @@ def get_categorical_counts_clusters(X, clusters):
     return dict_cluster_stats
 
 
-def get_categorical_counts_clusters_df(df, clusters, var_names):
+def get_categorical_counts_clusters_df(df, clusters, var_names, percentage = True):
     """
     Method to obtain the counts of categorical data for the clusters
     :param df: dataframe with categorical data
@@ -287,6 +287,7 @@ def get_categorical_counts_clusters_df(df, clusters, var_names):
     observations = np.zeros(n_clusters)
     for i, var_name in enumerate(var_names):
         dict_clusters = get_categorical_counts_clusters(df[var_name], clusters)
+        print(dict_clusters)
         observations = np.zeros(n_clusters)  # this is repetitive, but works
         for j, cluster in enumerate(dict_clusters.keys()):  # might not be sorted, so do it in this way
             for k, class_name in enumerate(list(set(df[var_name]))):  # iterate over all classes
@@ -294,8 +295,12 @@ def get_categorical_counts_clusters_df(df, clusters, var_names):
                 result[j, k+cur_len_cols] = dict_clusters[cluster][class_name]
                 result_counts[j, k + cur_len_cols] = dict_clusters[cluster][class_name]
                 observations[j] += dict_clusters[cluster][class_name]
-            result[j,:] = result[j, :] / observations[j]
         cur_len_cols +=len(set(df[var_name]))
+
+    #  obtain percentages instead of counts
+    if percentage:
+        for j, cluster in enumerate(dict_clusters.keys()):
+            result[j, :] = result[j, :] / observations[j]
 
     last_row = np.sum(result_counts, axis=0)
     last_row = last_row/np.sum(observations)
@@ -307,7 +312,7 @@ def get_categorical_counts_clusters_df(df, clusters, var_names):
     return result_df
 
 
-def plot_clusters(X_embedded, labels, title="", save_path=None, s=1):
+def plot_clusters(X_embedded, labels, title="", save_path=None, s=1, loc = "upper left"):
     """
     Visualises the observations from X_embedded with the corresponding clusters in a 2D plot
     """
@@ -320,8 +325,8 @@ def plot_clusters(X_embedded, labels, title="", save_path=None, s=1):
     ax.axis('off')
     # scatter = ax.scatter(x=X_sorted[:, 0], y=X_sorted[:, 1], cmap="Paired", c=labels_sorted, s=1, vmin=0, vmax=6)
     scatter = ax.scatter(x=X_embedded[:, 0], y=X_embedded[:, 1], cmap="Paired", c=labels, s=s, vmin=0, vmax=6)
-    ax.set_title(title)
-    ax.legend(*scatter.legend_elements(), loc="upper left", title='Cluster', prop={'size': 10}, fancybox=True)
+    ax.set_title(title, fontsize=12)
+    ax.legend(*scatter.legend_elements(), loc=loc, title='Cluster', prop={'size': 10}, fancybox=True)
 
     if save_path != None:
         make_dir(save_path)

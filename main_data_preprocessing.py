@@ -123,6 +123,9 @@ def main_preprocessing_version_4():
     version = 4  # specify version
     final_data.to_csv("Data/zipcodedata_version_" + str(version) + "_nanincluded.csv", index=False)
     print(final_data)
+    print(len(final_data["pc4"]))
+    final_data = final_data.dropna()
+    print(len(final_data["pc4"]))
 
 
 def main_preprocessing_version_5():
@@ -290,22 +293,23 @@ def main_imputation(version):
     X_normalized, max, min = normalise(X)  # first normalize since we use euclidean distance in knn
     imputed_X_normalized = KNNImputer(n_neighbors=20).fit_transform(X_normalized)
     imputed_X = imputed_X_normalized * (max-min) + min  # rescale back to original values
+    #X = imputed_X_normalized
+    X = imputed_X
     imputed_X_normalized = np.concatenate((pc4.values.reshape((n, 1)), imputed_X_normalized), axis=1)
     imputed_X = np.concatenate((pc4.values.reshape((n, 1)), imputed_X), axis=1)
 
 
     ''' 
     #  removing outliers
-    X = imputed_X_normalized
-    clf = IsolationForest(max_samples=100, random_state=0, contamination=0.05)
+
+    #clf = IsolationForest(max_samples=100, random_state=0, contamination=0.05)
     LOF = LocalOutlierFactor()
-    print(X)
-    outlier_detection = DBSCAN(min_samples=2, eps=3)
-    preds = outlier_detection.fit_predict(X)
+    #outlier_detection = DBSCAN(min_samples=2, eps=3)
+    #preds = outlier_detection.fit_predict(X)
     #preds = clf.fit_predict(X)
-    #preds = LOF.fit_predict(X)
+    preds = LOF.fit_predict(X)
     print(len(preds))
-    print(np.sum(preds==-1))
+    print("number of outliers: " + str(np.sum(preds==-1)))
     print(np.sum(preds==1))
 
     imputed_X = imputed_X[preds!=-1]
@@ -325,16 +329,17 @@ def main_imputation(version):
 
 
 if __name__ == '__main__':
-    version = 9
+    version = 10
+    main_preprocessing_version_4()
     #main_preprocessing_version_4()
     #main_preprocessing_version_5()
     #main_preprocessing_version_6()
     #main_preprocessing_version_7()
     #main_preprocessing_version_8()
     #main_preprocessing_version_9()
-    main_preprocessing_version_10()
+    #main_preprocessing_version_10()
 
-    main_imputation(version)
+    #main_imputation(version)
     #main_statistics()
 
 

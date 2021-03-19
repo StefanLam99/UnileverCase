@@ -91,20 +91,20 @@ def main_visul():
     plt.show()
 
     #  plot Silhouette measures
-    plt.plot(k_range, silhouette_measures[:, 0], 'cx-', label="TSC - Kmeans", marker = 'o', markevery=[i for i in  k_indices[1:]])
+    plt.plot(k_range, silhouette_measures[:, 0], 'cx-', label="TS k-means", marker = 'o', markevery=[i for i in  k_indices[1:]])
     plt.plot(k_range, silhouette_measures[:, 0], 'cx-', marker = '*', markevery = [k_indices[0]], markersize=14)
 
-    plt.plot(k_range, silhouette_measures[:, 1], 'rx-', label="TSC - GMM", marker = 'o', markevery=[i for i in  k_indices[1:]])
+    plt.plot(k_range, silhouette_measures[:, 1], 'rx-', label="TS GMM", marker = 'o', markevery=[i for i in  k_indices[1:]])
     plt.plot(k_range, silhouette_measures[:, 1], 'rx-', marker = '*', markevery = [k_indices[0]], markersize=14)
 
-    plt.plot(k_range, silhouette_measures[:, 2], 'gx-', label="Kmeans", marker = 'o', markevery=[i for i in  k_indices[1:]])
+    plt.plot(k_range, silhouette_measures[:, 2], 'gx-', label="k-means", marker = 'o', markevery=[i for i in  k_indices[1:]])
     plt.plot(k_range, silhouette_measures[:, 2], 'gx-', marker='*', markevery = [k_indices[0]], markersize=14)
 
     plt.plot(k_range, silhouette_measures[:, 3], 'mx-', label="GMM", marker = 'o', markevery=[i for i in  k_indices[1:]])
     plt.plot(k_range, silhouette_measures[:, 3], 'mx-', marker='*', markevery = [k_indices[0]], markersize=14)
 
     plt.xlabel('Number of clusters', fontsize= 14)
-    plt.ylabel('Silhouette Score', fontsize=14)
+    plt.ylabel('Average Silhouette Coefficient', fontsize=14)
     plt.xticks(k_range)
     #plt.title('Silhouette score for the clustering methods version ' + str(version))
     plt.legend(fontsize=12, fancybox=True, edgecolor = "black", frameon =True)
@@ -114,5 +114,5 @@ def main_visul():
 
 if __name__ == '__main__':
     version = 10
-    #main_validation(version)
+    main_validation(version)
     main_visul()
